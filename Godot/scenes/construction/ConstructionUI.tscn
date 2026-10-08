@@ -1,0 +1,201 @@
+[gd_scene format=3 uid="uid://cui34construction01"]
+
+[ext_resource type="Script" path="res://scripts/construction/ConstructionUI.gd" id="1_cui"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.12, 0.14, 0.18, 0.9)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.28, 0.35, 0.45, 0.8)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+content_margin_left = 16.0
+content_margin_top = 16.0
+content_margin_right = 16.0
+content_margin_bottom = 16.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_infobox"]
+bg_color = Color(0.08, 0.09, 0.12, 0.8)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.2, 0.25, 0.35, 0.6)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 12.0
+content_margin_top = 8.0
+content_margin_right = 12.0
+content_margin_bottom = 8.0
+
+[node name="ConstructionUI" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_cui")
+
+[node name="PanelContainer" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 9
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 290.0
+offset_bottom = -16.0
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="VBox" type="VBoxContainer" parent="PanelContainer"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="PanelContainer/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 17
+text = "🛠️ Modo Crear: Construcción"
+horizontal_alignment = 1
+
+[node name="HSeparator1" type="HSeparator" parent="PanelContainer/VBox"]
+layout_mode = 2
+
+[node name="LblTools" type="Label" parent="PanelContainer/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "HERRAMIENTAS"
+
+[node name="BtnBuildWall" type="Button" parent="PanelContainer/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+toggle_mode = true
+button_pressed = true
+text = "🧱 Crear Pared (A -> B)"
+
+[node name="BtnSelect" type="Button" parent="PanelContainer/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+toggle_mode = true
+text = "✋ Seleccionar / Mover"
+
+[node name="BtnDelete" type="Button" parent="PanelContainer/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+disabled = true
+text = "🗑️ Eliminar Seleccionada"
+
+[node name="BtnClearAll" type="Button" parent="PanelContainer/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "🧹 Limpiar Todo"
+
+[node name="HSeparator2" type="HSeparator" parent="PanelContainer/VBox"]
+layout_mode = 2
+
+[node name="LblDimensions" type="Label" parent="PanelContainer/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "MEDIDAS DE PARED"
+
+[node name="GridDimensions" type="GridContainer" parent="PanelContainer/VBox"]
+layout_mode = 2
+columns = 2
+
+[node name="LblHeight" type="Label" parent="PanelContainer/VBox/GridDimensions"]
+layout_mode = 2
+text = "Alto (m):"
+
+[node name="SpinHeight" type="SpinBox" parent="PanelContainer/VBox/GridDimensions"]
+unique_name_in_owner = true
+layout_mode = 2
+min_value = 1.0
+max_value = 8.0
+step = 0.1
+value = 3.0
+
+[node name="LblThickness" type="Label" parent="PanelContainer/VBox/GridDimensions"]
+layout_mode = 2
+text = "Grosor (m):"
+
+[node name="SpinThickness" type="SpinBox" parent="PanelContainer/VBox/GridDimensions"]
+unique_name_in_owner = true
+layout_mode = 2
+min_value = 0.05
+max_value = 1.0
+step = 0.05
+value = 0.2
+
+[node name="HSeparator3" type="HSeparator" parent="PanelContainer/VBox"]
+layout_mode = 2
+
+[node name="LblSnapping" type="Label" parent="PanelContainer/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "CUADRÍCULA Y SNAPPING"
+
+[node name="CheckSnap" type="CheckBox" parent="PanelContainer/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+button_pressed = true
+text = "Alinear a Cuadrícula"
+
+[node name="HBoxSnapSize" type="HBoxContainer" parent="PanelContainer/VBox"]
+layout_mode = 2
+
+[node name="LblSnapStep" type="Label" parent="PanelContainer/VBox/HBoxSnapSize"]
+layout_mode = 2
+text = "Paso:"
+
+[node name="OptSnapSize" type="OptionButton" parent="PanelContainer/VBox/HBoxSnapSize"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="CheckAngleSnap" type="CheckBox" parent="PanelContainer/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+button_pressed = true
+text = "Snap de Ángulo (45° / 90°)"
+
+[node name="Spacer" type="Control" parent="PanelContainer/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="InfoPanel" type="PanelContainer" parent="PanelContainer/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_infobox")
+
+[node name="VBoxHelp" type="VBoxContainer" parent="PanelContainer/VBox/InfoPanel"]
+layout_mode = 2
+
+[node name="LblHelpTitle" type="Label" parent="PanelContainer/VBox/InfoPanel/VBoxHelp"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.8, 1, 1)
+theme_override_font_sizes/font_size = 12
+text = "ℹ️ CONTROLES:"
+
+[node name="LblHelpBody" type="Label" parent="PanelContainer/VBox/InfoPanel/VBoxHelp"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "• Clic Izq: Marcar inicio / fin
+• Clic Der / Esc: Cancelar
+• Supr / Backspace: Borrar
+• Click Der + Mover: Rotar cámara
+• Rueda: Zoom cámara"
+
+[node name="LblStatus" type="Label" parent="PanelContainer/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.4, 0.9, 0.5, 1)
+theme_override_font_sizes/font_size = 12
+text = "Listo."
+autowrap_mode = 2

@@ -1,7 +1,8 @@
 [gd_scene format=3 uid="uid://cj2e0qbbkumfl"]
 
 [ext_resource type="Script" uid="uid://cmqyke7q4kfnx" path="res://scripts/core/Main.gd" id="1_elqb8"]
-[ext_resource type="Script" uid="uid://mv2rhyawhp7g" path="res://scenes/cubo.gd" id="2_rvslj"]
+[ext_resource type="PackedScene" uid="uid://csys34rootscene01" path="res://scenes/construction/ConstructionSystem.tscn" id="2_csys"]
+[ext_resource type="Script" uid="uid://mv2rhyawhp7g" path="res://scenes/cubo.gd" id="3_rvslj"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_jdlef"]
 size = Vector2(10, 10)
@@ -25,7 +26,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6113281, 0.69317627, -0.069
 mesh = SubResource("PlaneMesh_jdlef")
 
 [node name="Cubo" type="CharacterBody3D" parent="World" unique_id=1827754576]
-script = ExtResource("2_rvslj")
+script = ExtResource("3_rvslj")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="World/Cubo" unique_id=86536645]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
@@ -35,6 +36,8 @@ mesh = SubResource("BoxMesh_gbebh")
 shape = SubResource("BoxShape3D_jdlef")
 
 [node name="Editor" type="Node3D" parent="." unique_id=469739020]
+
+[node name="ConstructionSystem" parent="Editor" instance=ExtResource("2_csys")]
 
 [node name="Systems" type="Node3D" parent="." unique_id=1903909664]
 
