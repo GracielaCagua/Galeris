@@ -1,8 +1,14 @@
 [gd_scene format=3 uid="uid://cj2e0qbbkumfl"]
 
 [ext_resource type="Script" uid="uid://cmqyke7q4kfnx" path="res://scripts/core/Main.gd" id="1_elqb8"]
+[ext_resource type="Script" uid="uid://mv2rhyawhp7g" path="res://scenes/cubo.gd" id="2_rvslj"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_jdlef"]
+size = Vector2(10, 10)
 
 [sub_resource type="BoxMesh" id="BoxMesh_gbebh"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_jdlef"]
 
 [node name="Main" type="Node3D" unique_id=1061207172]
 script = ExtResource("1_elqb8")
@@ -14,8 +20,19 @@ transform = Transform3D(1, 0, 0, 0, 0.9848077, 0.17364818, 0, -0.17364818, 0.984
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="World" unique_id=942648590]
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="World" unique_id=86536645]
+[node name="Piso" type="MeshInstance3D" parent="World" unique_id=910581264]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6113281, 0.69317627, -0.0690918)
+mesh = SubResource("PlaneMesh_jdlef")
+
+[node name="Cubo" type="CharacterBody3D" parent="World" unique_id=1827754576]
+script = ExtResource("2_rvslj")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="World/Cubo" unique_id=86536645]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 mesh = SubResource("BoxMesh_gbebh")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="World/Cubo" unique_id=770582939]
+shape = SubResource("BoxShape3D_jdlef")
 
 [node name="Editor" type="Node3D" parent="." unique_id=469739020]
 
@@ -24,5 +41,25 @@ mesh = SubResource("BoxMesh_gbebh")
 [node name="UI" type="CanvasLayer" parent="." unique_id=1061913736]
 
 [node name="ModoLabel" type="Label" parent="UI" unique_id=357672116]
-offset_right = 40.0
-offset_bottom = 23.0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 170.0
+offset_bottom = 43.0
+text = "MODO: VISUALIZAR"
+
+[node name="BotonVisualizar" type="Button" parent="UI" unique_id=561301873]
+offset_left = 20.0
+offset_top = 60.0
+offset_right = 118.0
+offset_bottom = 91.0
+text = "VISUALIZAR"
+
+[node name="BotonCrear" type="Button" parent="UI" unique_id=863781486]
+offset_left = 150.0
+offset_top = 60.0
+offset_right = 209.0
+offset_bottom = 91.0
+text = "CREAR"
+
+[connection signal="pressed" from="UI/BotonVisualizar" to="." method="_on_boton_visualizar_pressed"]
+[connection signal="pressed" from="UI/BotonCrear" to="." method="_on_boton_crear_pressed"]
