@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Model Forge · Editor 3D</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">◆</div>
+        <div>
+          <strong>MODEL FORGE</strong>
+          <span>Editor de escenas 3D</span>
+        </div>
+      </div>
+      <div class="mode-switch" role="group" aria-label="Modo de edición">
+        <button class="mode-button active" data-mode="create">✦ Crear</button>
+        <button class="mode-button" data-mode="edit">✎ Editar</button>
+        <button class="mode-button" data-mode="view">◉ Visualizar</button>
+      </div>
+      <div class="top-actions">
+        <button id="save-button" class="button secondary">Guardar JSON</button>
+        <button id="clear-button" class="button danger">Limpiar escena</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <aside class="sidebar">
+        <section class="panel-section">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">RECURSOS</p>
+              <h2>Biblioteca 3D</h2>
+            </div>
+            <span id="resource-count" class="count-badge">0</span>
+          </div>
+          <label class="upload-zone" for="model-input">
+            <span class="upload-icon">＋</span>
+            <strong>Importar modelo</strong>
+            <small>GLB / glTF · arrastra o selecciona</small>
+          </label>
+          <input id="model-input" type="file" accept=".glb,.gltf,.bin,model/gltf-binary,model/gltf+json" hidden />
+          <div id="resource-list" class="resource-list"></div>
+        </section>
+
+        <section class="panel-section scene-section">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">ESCENA ACTUAL</p>
+              <h2>Objetos colocados</h2>
+            </div>
+            <span id="object-count" class="count-badge">0</span>
+          </div>
+          <div id="scene-list" class="scene-list empty-state">Aún no hay objetos en la escena.</div>
+        </section>
+
+        <section class="panel-section tips">
+          <p class="eyebrow">ATAJOS</p>
+          <p><kbd>Supr</kbd> elimina el objeto seleccionado</p>
+          <p>En <strong>Crear</strong> y <strong>Editar</strong> arrastra las flechas del objeto.</p>
+          <p>En <strong>Visualizar</strong> la escena queda bloqueada.</p>
+        </section>
+      </aside>
+
+      <section class="viewport-shell">
+        <div class="viewport-toolbar">
+          <div class="toolbar-status"><span class="status-dot"></span><span id="mode-label">Modo crear activo</span></div>
+          <div class="gizmo-tools" role="group" aria-label="Herramientas de transformación">
+            <button class="gizmo-tool" data-gizmo-mode="translate" title="Mover objeto">↕ Mover</button>
+            <button class="gizmo-tool active" data-gizmo-mode="rotate" title="Rotar objeto">↻ Rotar</button>
+            <button class="gizmo-tool" data-gizmo-mode="scale" title="Cambiar escala">⤢ Escalar</button>
+          </div>
+          <div class="toolbar-help">Haz clic en un objeto y arrastra sus controles</div>
+          <span id="selection-label" class="selection-label">Sin selección</span>
+        </div>
+        <div id="viewport" class="viewport"></div>
+        <div id="drop-hint" class="drop-hint">Suelta un archivo GLB/glTF para importarlo</div>
+        <div class="viewport-footer">
+          <span>Y arriba · unidades en metros</span>
+          <span id="load-status">Listo para crear</span>
+        </div>
+      </section>
+
+      <aside class="inspector">
+        <div class="inspector-header">
+          <p class="eyebrow">INSPECTOR</p>
+          <h2 id="inspector-title">Sin selección</h2>
+          <p id="inspector-subtitle">Selecciona un objeto en Modo crear.</p>
+        </div>
+        <div id="transform-fields" class="transform-fields is-disabled">
+          <div class="field-group">
+            <div class="field-heading"><span>Posición</span><span class="axis-label">XYZ</span></div>
+            <div class="vector-fields">
+              <label><i class="x">X</i><input data-transform="position" data-axis="x" type="number" step="0.1" disabled /></label>
+              <label><i class="y">Y</i><input data-transform="position" data-axis="y" type="number" step="0.1" disabled /></label>
+              <label><i class="z">Z</i><input data-transform="position" data-axis="z" type="number" step="0.1" disabled /></label>
+            </div>
+          </div>
+          <div class="field-group">
+            <div class="field-heading"><span>Rotación</span><span class="axis-label">GRADOS</span></div>
+            <div class="vector-fields">
+              <label><i class="x">X</i><input data-transform="rotation" data-axis="x" type="number" step="1" disabled /></label>
+              <label><i class="y">Y</i><input data-transform="rotation" data-axis="y" type="number" step="1" disabled /></label>
+              <label><i class="z">Z</i><input data-transform="rotation" data-axis="z" type="number" step="1" disabled /></label>
+            </div>
+          </div>
+          <div class="field-group">
+            <div class="field-heading"><span>Escala</span><button id="uniform-scale" class="link-button active">Vinculada</button></div>
+            <div class="vector-fields">
+              <label><i class="x">X</i><input data-transform="scale" data-axis="x" type="number" step="0.1" min="0.01" disabled /></label>
+              <label><i class="y">Y</i><input data-transform="scale" data-axis="y" type="number" step="0.1" min="0.01" disabled /></label>
+              <label><i class="z">Z</i><input data-transform="scale" data-axis="z" type="number" step="0.1" min="0.01" disabled /></label>
+            </div>
+          </div>
+        </div>
+        <div class="inspector-footer">
+          <div class="model-meta"><span>IDENTIFICADOR</span><code id="model-id">—</code></div>
+          <button id="delete-button" class="button danger full" disabled>Eliminar objeto</button>
+        </div>
+      </aside>
+    </main>
+    <div id="toast" class="toast" role="status"></div>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/"
+        }
+      }
+    </script>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
