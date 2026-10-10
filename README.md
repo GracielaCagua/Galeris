@@ -1,16 +1,21 @@
 # Model Forge
 
+## Stack
+
+El editor está construido con **React + Vite + Three.js**. React controla la biblioteca, los modos, el inspector y el estado de la escena; Three.js mantiene el viewport, OrbitControls, TransformControls y la carga GLB/glTF.
+
 Demo web para la Persona 4: carga de modelos GLB/glTF, biblioteca de recursos, colocación en escena, selección solo en **Modo crear**, transformación con gizmos, eliminación y bloqueo completo en **Modo visualizar**.
 
 ## Ejecutar
 
-Como usa módulos ES y carga Three.js desde CDN, hay que servir la carpeta con un servidor local (no abrir `index.html` directamente):
+Instalar dependencias y ejecutar:
 
 ```powershell
-python -m http.server 8080
+npm install
+npm run dev
 ```
 
-Después abrir `http://localhost:8080`.
+Después abrir la URL que muestre Vite, normalmente `http://localhost:5173`.
 
 ## Integración con Persona 1
 
