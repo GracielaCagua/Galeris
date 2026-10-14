@@ -8,7 +8,6 @@ enum Modo {
 
 var modo_actual: Modo = Modo.VISUALIZAR
 
-
 func cambiar_modo(nuevo_modo: Modo) -> void:
 	if modo_actual == nuevo_modo:
 		return
@@ -19,7 +18,6 @@ func cambiar_modo(nuevo_modo: Modo) -> void:
 
 func esta_en_modo_visualizar() -> bool:
 	return modo_actual == Modo.VISUALIZAR
-
 
 func esta_en_modo_crear() -> bool:
 	return modo_actual == Modo.CREAR
