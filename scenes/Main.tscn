@@ -34,6 +34,8 @@ mesh = SubResource("BoxMesh_gbebh")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="World/Cubo" unique_id=770582939]
 shape = SubResource("BoxShape3D_jdlef")
 
+[node name="Objetos" type="Node3D" parent="World" unique_id=781485624]
+
 [node name="Editor" type="Node3D" parent="." unique_id=469739020]
 
 [node name="Systems" type="Node3D" parent="." unique_id=1903909664]

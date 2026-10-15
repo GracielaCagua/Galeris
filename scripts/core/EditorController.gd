@@ -33,3 +33,10 @@ func bloquear_herramientas() -> void:
 func habilitar_herramientas() -> void:
 	if AppManager.puede_editar():
 		herramientas_habilitadas = true
+
+func verificar_permiso_edicion() -> bool:
+	if not AppManager.puede_editar():
+		print("Acción bloqueada: estás en Modo Visualizar.")
+		return false
+
+	return herramientas_habilitadas
