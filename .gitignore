@@ -5,7 +5,10 @@ export.cfg
 export_presets.cfg
 .mono/
 
-# Local editor and temporary files
+# Local editor, operating system and temporary files
 .vscode/
+.DS_Store
+Thumbs.db
+Desktop.ini
 *.tmp
 *.temp
