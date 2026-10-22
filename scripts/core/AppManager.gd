@@ -32,13 +32,13 @@ func puede_editar() -> bool:
 	return AppMode.can_edit()
 
 
-func _to_app_mode(modo: Modo) -> AppMode.Mode:
+func _to_app_mode(modo: Modo):
 	if modo == Modo.CREAR:
 		return AppMode.Mode.CREATE
 
 	return AppMode.Mode.VISUALIZE
 
 
-func _on_mode_changed(mode: AppMode.Mode) -> void:
+func _on_mode_changed(mode) -> void:
 	var legacy_mode: Modo = Modo.CREAR if mode == AppMode.Mode.CREATE else Modo.VISUALIZAR
 	modo_cambiado.emit(legacy_mode)

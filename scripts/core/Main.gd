@@ -54,7 +54,7 @@ func _process(delta: float) -> void:
 		cubo.position += movimiento.normalized() * velocidad_movimiento * delta
 
 
-func _on_mode_changed(_new_mode: AppMode.Mode) -> void:
+func _on_mode_changed(_new_mode) -> void:
 	_actualizar_interfaz()
 
 	print("Modo actual: ", AppMode.mode_name())

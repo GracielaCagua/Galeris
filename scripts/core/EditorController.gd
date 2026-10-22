@@ -13,7 +13,7 @@ func _ready() -> void:
 	print("Herramientas habilitadas: ", herramientas_habilitadas)
 
 
-func _on_mode_changed(_new_mode: AppMode.Mode) -> void:
+func _on_mode_changed(_new_mode) -> void:
 	_actualizar_estado(AppMode.can_use_tools())
 
 	print("Cambio de modo")
