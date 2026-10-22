@@ -6,21 +6,19 @@ extends Node3D
 var velocidad_movimiento: float = 2.0
 
 func _ready() -> void:
-	AppManager.modo_cambiado.connect(_on_modo_cambiado)
+	AppMode.mode_changed.connect(_on_mode_changed)
 
 	_actualizar_interfaz()
 
-	print("Modo inicial: ", AppManager.obtener_nombre_modo())
-	print("¿Puede editar?: ", AppManager.puede_editar())
-	
-
+	print("Modo inicial: ", AppMode.mode_name())
+	print("¿Puede editar?: ", AppMode.can_edit())
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_C:
-			AppManager.cambiar_modo(AppManager.Modo.CREAR)
+			AppMode.change_mode(AppMode.Mode.CREATE)
 		elif event.keycode == KEY_V:
-			AppManager.cambiar_modo(AppManager.Modo.VISUALIZAR)
+			AppMode.change_mode(AppMode.Mode.VISUALIZE)
 		elif event.keycode == KEY_G:
 			ProjectManager.guardar_escena($World/Objetos)
 		elif event.keycode == KEY_L:
@@ -34,7 +32,7 @@ func _input(event: InputEvent) -> void:
 
 func _process(delta: float) -> void:
 	# En Modo Visualizar no se permite mover el cubo.
-	if AppManager.esta_en_modo_visualizar():
+	if AppMode.is_visualizing():
 		return
 
 	# Las herramientas deben estar habilitadas en Modo Crear.
@@ -56,23 +54,23 @@ func _process(delta: float) -> void:
 		cubo.position += movimiento.normalized() * velocidad_movimiento * delta
 
 
-func _on_modo_cambiado(_nuevo_modo) -> void:
+func _on_mode_changed(_new_mode: AppMode.Mode) -> void:
 	_actualizar_interfaz()
 
-	print("Modo actual: ", AppManager.obtener_nombre_modo())
+	print("Modo actual: ", AppMode.mode_name())
 	print("Herramientas habilitadas: ", EditorController.puede_usar_herramientas())
 
 
 func _actualizar_interfaz() -> void:
-	modo_label.text = AppManager.obtener_nombre_modo()
+	modo_label.text = AppMode.mode_name()
 
 
 func _on_boton_visualizar_pressed() -> void:
-	AppManager.cambiar_modo(AppManager.Modo.VISUALIZAR)
+	AppMode.change_mode(AppMode.Mode.VISUALIZE)
 
 
 func _on_boton_crear_pressed() -> void:
-	AppManager.cambiar_modo(AppManager.Modo.CREAR)
+	AppMode.change_mode(AppMode.Mode.CREATE)
 
 
 func probar_guardado_carga() -> void:

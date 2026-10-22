@@ -1,32 +1,44 @@
 extends Node
-signal modo_cambiado(nuevo_modo)
 
 enum Modo {
 	VISUALIZAR,
 	CREAR
 }
 
-var modo_actual: Modo = Modo.VISUALIZAR
+signal modo_cambiado(nuevo_modo)
+
+
+func _ready() -> void:
+	AppMode.mode_changed.connect(_on_mode_changed)
+
 
 func cambiar_modo(nuevo_modo: Modo) -> void:
-	if modo_actual == nuevo_modo:
-		return
-	
-	modo_actual = nuevo_modo
-	modo_cambiado.emit(modo_actual)
+	AppMode.change_mode(_to_app_mode(nuevo_modo))
 
 
 func esta_en_modo_visualizar() -> bool:
-	return modo_actual == Modo.VISUALIZAR
+	return AppMode.is_visualizing()
+
 
 func esta_en_modo_crear() -> bool:
-	return modo_actual == Modo.CREAR
-	
+	return AppMode.can_edit()
+
+
 func obtener_nombre_modo() -> String:
-	if modo_actual == Modo.VISUALIZAR:
-		return "Modo Visualizar"
-		
-	return "Modo Crear"
+	return AppMode.mode_name()
+
 
 func puede_editar() -> bool:
-	return modo_actual == Modo.CREAR
+	return AppMode.can_edit()
+
+
+func _to_app_mode(modo: Modo) -> AppMode.Mode:
+	if modo == Modo.CREAR:
+		return AppMode.Mode.CREATE
+
+	return AppMode.Mode.VISUALIZE
+
+
+func _on_mode_changed(mode: AppMode.Mode) -> void:
+	var legacy_mode: Modo = Modo.CREAR if mode == AppMode.Mode.CREATE else Modo.VISUALIZAR
+	modo_cambiado.emit(legacy_mode)

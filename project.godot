@@ -17,6 +17,7 @@ config/icon="res://icon.svg"
 
 [autoload]
 
+AppMode="*res://scripts/core/AppMode.gd"
 AppManager="*uid://dfoxqkyrx6kro"
 ProjectManager="*uid://ctcu21vx8gjn8"
 EditorController="*uid://dheauil2f67s5"
