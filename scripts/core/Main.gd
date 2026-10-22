@@ -30,10 +30,3 @@ func _on_mode_changed(_new_mode) -> void:
 func _actualizar_interfaz() -> void:
 	modo_label.text = AppMode.mode_name()
 
-
-func _on_boton_visualizar_pressed() -> void:
-	AppMode.change_mode(AppMode.Mode.VISUALIZE)
-
-
-func _on_boton_crear_pressed() -> void:
-	AppMode.change_mode(AppMode.Mode.CREATE)

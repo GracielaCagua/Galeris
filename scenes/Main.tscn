@@ -62,6 +62,3 @@ offset_top = 60.0
 offset_right = 209.0
 offset_bottom = 91.0
 text = "CREAR"
-
-[connection signal="pressed" from="UI/BotonVisualizar" to="." method="_on_boton_visualizar_pressed"]
-[connection signal="pressed" from="UI/BotonCrear" to="." method="_on_boton_crear_pressed"]
