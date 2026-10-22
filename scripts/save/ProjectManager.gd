@@ -5,7 +5,7 @@ const PROJECT_DIRECTORY := "user://proyectos"
 const DEFAULT_PROJECT_ID := "principal"
 
 
-func crear_proyecto_vacio() -> Dictionary:
+func create_empty_project() -> Dictionary:
 	return {
 		"version": PROJECT_VERSION,
 		"nombre_proyecto": "Nuevo proyecto",
@@ -20,11 +20,11 @@ func crear_proyecto_vacio() -> Dictionary:
 	}
 
 
-func obtener_ruta_proyecto(project_id: String = DEFAULT_PROJECT_ID) -> String:
+func get_project_path(project_id: String = DEFAULT_PROJECT_ID) -> String:
 	return "%s/%s.json" % [PROJECT_DIRECTORY, project_id]
 
 
-func guardar_proyecto(
+func save_project(
 	datos: Dictionary,
 	project_id: String = DEFAULT_PROJECT_ID
 ) -> Dictionary:
@@ -34,7 +34,7 @@ func guardar_proyecto(
 	var directory_path := ProjectSettings.globalize_path(PROJECT_DIRECTORY)
 	DirAccess.make_dir_recursive_absolute(directory_path)
 
-	var project_path := obtener_ruta_proyecto(project_id)
+	var project_path := get_project_path(project_id)
 	var temporary_path := project_path + ".tmp"
 	var temporary_file := FileAccess.open(temporary_path, FileAccess.WRITE)
 
@@ -60,8 +60,8 @@ func guardar_proyecto(
 	}
 
 
-func cargar_proyecto(project_id: String = DEFAULT_PROJECT_ID) -> Dictionary:
-	var project_path := obtener_ruta_proyecto(project_id)
+func load_project(project_id: String = DEFAULT_PROJECT_ID) -> Dictionary:
+	var project_path := get_project_path(project_id)
 	if not FileAccess.file_exists(project_path):
 		return _error_result("no existe")
 
@@ -85,20 +85,20 @@ func cargar_proyecto(project_id: String = DEFAULT_PROJECT_ID) -> Dictionary:
 	}
 
 
-func guardar_escena(contenedor: Node = null, project_id: String = DEFAULT_PROJECT_ID) -> Dictionary:
-	var load_result := cargar_proyecto(project_id)
+func save_scene(container: Node = null, project_id: String = DEFAULT_PROJECT_ID) -> Dictionary:
+	var load_result := load_project(project_id)
 	var datos: Dictionary
 
 	if load_result["ok"]:
 		datos = load_result["datos"]
 	elif load_result["mensaje"] == "no existe":
-		datos = crear_proyecto_vacio()
+		datos = create_empty_project()
 	else:
 		return load_result
 
 	var objetos: Array[Dictionary] = []
 	for node in get_tree().get_nodes_in_group("persistible"):
-		if contenedor != null and not contenedor.is_ancestor_of(node):
+		if container != null and not container.is_ancestor_of(node):
 			continue
 		if not node.has_method("serialize"):
 			push_error("El nodo persistible no implementa serialize(): " + node.name)
@@ -109,7 +109,7 @@ func guardar_escena(contenedor: Node = null, project_id: String = DEFAULT_PROJEC
 			objetos.append(serialized)
 
 	datos["objetos"] = objetos
-	return guardar_proyecto(datos, project_id)
+	return save_project(datos, project_id)
 
 
 func _error_result(message: String) -> Dictionary:
