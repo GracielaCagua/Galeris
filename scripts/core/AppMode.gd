@@ -15,6 +15,7 @@ func change_mode(new_mode: Mode) -> void:
 		return
 
 	current_mode = new_mode
+	_update_editor_tools()
 	mode_changed.emit(current_mode)
 
 
@@ -22,8 +23,12 @@ func can_edit() -> bool:
 	return current_mode == Mode.CREATE
 
 
-func can_use_tools() -> bool:
-	return can_edit()
+func guard(action: String) -> bool:
+	if can_edit():
+		return true
+
+	print("Acción bloqueada en Modo Visualizar: ", action)
+	return false
 
 
 func is_visualizing() -> bool:
@@ -35,3 +40,11 @@ func mode_name() -> String:
 		return "Modo Visualizar"
 
 	return "Modo Crear"
+
+
+func _update_editor_tools() -> void:
+	var enabled := can_edit()
+	for node in get_tree().get_nodes_in_group("editor_tool"):
+		node.set_process(enabled)
+		node.set_physics_process(enabled)
+		node.set_process_unhandled_input(enabled)
