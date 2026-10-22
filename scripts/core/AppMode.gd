@@ -10,6 +10,10 @@ enum Mode {
 var current_mode: Mode = Mode.VISUALIZE
 
 
+func _ready() -> void:
+	_update_editor_tools()
+
+
 func change_mode(new_mode: Mode) -> void:
 	if current_mode == new_mode:
 		return
