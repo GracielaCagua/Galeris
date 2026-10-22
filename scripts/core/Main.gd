@@ -29,4 +29,3 @@ func _on_mode_changed(_new_mode) -> void:
 
 func _actualizar_interfaz() -> void:
 	modo_label.text = AppMode.mode_name()
-
