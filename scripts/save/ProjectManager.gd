@@ -1,213 +1,120 @@
 extends Node
 
-const SAVE_PATH := "user://proyecto.json"
 const PROJECT_VERSION := 1
-
+const PROJECT_DIRECTORY := "user://proyectos"
+const DEFAULT_PROJECT_ID := "principal"
 
 
 func crear_proyecto_vacio() -> Dictionary:
 	return {
-		"version": 1,
+		"version": PROJECT_VERSION,
 		"nombre_proyecto": "Nuevo proyecto",
+		"recursos": {
+			"imagenes": {},
+			"modelos": {}
+		},
 		"paredes": [],
+		"piso": {},
 		"obras": [],
 		"objetos": []
 	}
 
 
-func guardar_proyecto(datos: Dictionary) -> void:
-	var archivo = FileAccess.open(SAVE_PATH, FileAccess.WRITE)
-	print("Ruta del archivo guardado: ", ProjectSettings.globalize_path(SAVE_PATH))
-
-	if archivo == null:
-		print("ERROR: No se pudo abrir el archivo para guardar.")
-		return
-
-	archivo.store_string(JSON.stringify(datos))
-	archivo.close()
-
-	print("Proyecto guardado correctamente.")
+func obtener_ruta_proyecto(project_id: String = DEFAULT_PROJECT_ID) -> String:
+	return "%s/%s.json" % [PROJECT_DIRECTORY, project_id]
 
 
-func cargar_proyecto() -> Dictionary:
-	if not FileAccess.file_exists(SAVE_PATH):
-		print("No existe un proyecto guardado.")
-		return {}
+func guardar_proyecto(
+	datos: Dictionary,
+	project_id: String = DEFAULT_PROJECT_ID
+) -> Dictionary:
+	var documento := datos.duplicate(true)
+	documento["version"] = PROJECT_VERSION
 
-	var archivo = FileAccess.open(SAVE_PATH, FileAccess.READ)
+	var directory_path := ProjectSettings.globalize_path(PROJECT_DIRECTORY)
+	DirAccess.make_dir_recursive_absolute(directory_path)
 
-	if archivo == null:
-		print("ERROR: No se pudo abrir el archivo guardado.")
-		return {}
+	var project_path := obtener_ruta_proyecto(project_id)
+	var temporary_path := project_path + ".tmp"
+	var temporary_file := FileAccess.open(temporary_path, FileAccess.WRITE)
 
-	var contenido = archivo.get_as_text()
-	archivo.close()
+	if temporary_file == null:
+		return _error_result("no se pudo abrir el archivo temporal")
 
-	var datos = JSON.parse_string(contenido)
+	temporary_file.store_string(JSON.stringify(documento, "\t"))
+	temporary_file.flush()
+	temporary_file.close()
 
-	if datos is Dictionary:
-		print("Proyecto cargado correctamente.")
-		return datos
-
-	print("ERROR: El archivo no contiene datos válidos.")
-	return {}
-
-
-func obtener_datos_objetos(contenedor: Node3D) -> Array[Dictionary]:
-	var objetos_guardados: Array[Dictionary] = []
-
-	for objeto in contenedor.get_children():
-		if not objeto is Node3D:
-			continue
-
-		var datos: Dictionary = {
-			"id": str(objeto.name),
-			"posicion": [
-				objeto.position.x,
-				objeto.position.y,
-				objeto.position.z
-			],
-			"rotacion": [
-				objeto.rotation.x,
-				objeto.rotation.y,
-				objeto.rotation.z
-			],
-			"escala": [
-				objeto.scale.x,
-				objeto.scale.y,
-				objeto.scale.z
-			]
-		}
-
-		objetos_guardados.append(datos)
-
-	return objetos_guardados
-
-
-func guardar_escena(contenedor: Node3D) -> void:
-	var datos: Dictionary = crear_proyecto_vacio()
-
-	datos["nombre_proyecto"] = "Galería Facultad de Artes"
-	datos["objetos"] = obtener_datos_objetos(contenedor)
-
-	guardar_proyecto(datos)
-
-	print("Objetos guardados: ", datos["objetos"].size())
-
-
-func cargar_datos_objetos() -> Array:
-	var datos: Dictionary = cargar_proyecto()
-
-	if datos.is_empty():
-		print("No hay datos de proyecto para cargar.")
-		return []
-
-	var objetos: Array = datos.get("objetos", [])
-	print("Objetos recuperados: ", objetos.size())
-
-	return objetos
-
-
-func guardar_nodo_3d(objeto: Node3D) -> void:
-	var datos: Dictionary = crear_proyecto_vacio()
-
-	datos["nombre_proyecto"] = "Galería Facultad de Artes"
-	datos["objetos"] = [
-		{
-			"id": str(objeto.name),
-			"modelo": "cubo",
-			"posicion": [
-				objeto.position.x,
-				objeto.position.y,
-				objeto.position.z
-			],
-			"rotacion": [
-				objeto.rotation.x,
-				objeto.rotation.y,
-				objeto.rotation.z
-			],
-			"escala": [
-				objeto.scale.x,
-				objeto.scale.y,
-				objeto.scale.z
-			]
-		}
-	]
-
-	guardar_proyecto(datos)
-	print("Nodo guardado: ", objeto.name)
-
-
-func restaurar_transformacion(objeto: Node3D) -> bool:
-	var datos: Dictionary = cargar_proyecto()
-	var objetos: Array = datos.get("objetos", [])
-
-	for item in objetos:
-		if str(item.get("id", "")) != str(objeto.name):
-			continue
-
-		var posicion: Array = item.get("posicion", [])
-		var rotacion: Array = item.get("rotacion", [])
-		var escala: Array = item.get("escala", [])
-
-		if posicion.size() != 3 or rotacion.size() != 3 or escala.size() != 3:
-			print("ERROR: Transformación incompleta.")
-			return false
-
-		objeto.position = Vector3(
-			float(posicion[0]), float(posicion[1]), float(posicion[2])
-		)
-		objeto.rotation = Vector3(
-			float(rotacion[0]), float(rotacion[1]), float(rotacion[2])
-		)
-		objeto.scale = Vector3(
-			float(escala[0]), float(escala[1]), float(escala[2])
-		)
-
-		print("Transformación restaurada: ", objeto.name)
-		return true
-
-	print("No se encontró el objeto: ", objeto.name)
-	return false
-
-
-
-func guardar_proyecto_completo(datos: Dictionary) -> bool:
-	var proyecto: Dictionary = crear_proyecto_vacio()
-
-	proyecto["nombre_proyecto"] = datos.get(
-		"nombre_proyecto",
-		"Nuevo proyecto"
+	var rename_error := DirAccess.rename_absolute(
+		ProjectSettings.globalize_path(temporary_path),
+		ProjectSettings.globalize_path(project_path)
 	)
+	if rename_error != OK:
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(temporary_path))
+		return _error_result("no se pudo reemplazar el archivo del proyecto")
 
-	proyecto["paredes"] = datos.get("paredes", [])
-	proyecto["obras"] = datos.get("obras", [])
-	proyecto["objetos"] = datos.get("objetos", [])
-
-	var archivo := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
-
-	if archivo == null:
-		push_error("No se pudo abrir el archivo para guardar.")
-		return false
-
-	archivo.store_string(JSON.stringify(proyecto, "\t"))
-	archivo.close()
-
-	print("Proyecto completo guardado correctamente.")
-	return true
-	
-	
-func probar_guardado_completo() -> void:
-	var datos: Dictionary = {
-		"nombre_proyecto": "Prueba de integración",
-		"paredes": [{"id": "pared_1"}],
-		"obras": [{"id": "obra_1"}],
-		"objetos": [{"id": "objeto_1"}]
+	return {
+		"ok": true,
+		"mensaje": "",
+		"datos": documento
 	}
 
-	if guardar_proyecto_completo(datos):
-		var recuperado := cargar_proyecto()
 
-		print("Paredes recuperadas: ", recuperado.get("paredes", []).size())
-		print("Obras recuperadas: ", recuperado.get("obras", []).size())
-		print("Objetos recuperados: ", recuperado.get("objetos", []).size())
+func cargar_proyecto(project_id: String = DEFAULT_PROJECT_ID) -> Dictionary:
+	var project_path := obtener_ruta_proyecto(project_id)
+	if not FileAccess.file_exists(project_path):
+		return _error_result("no existe")
+
+	var project_file := FileAccess.open(project_path, FileAccess.READ)
+	if project_file == null:
+		return _error_result("no se pudo abrir el archivo del proyecto")
+
+	var parsed_data = JSON.parse_string(project_file.get_as_text())
+	project_file.close()
+
+	if not (parsed_data is Dictionary):
+		return _error_result("JSON inválido")
+
+	if parsed_data.get("version") != PROJECT_VERSION:
+		return _error_result("versión no soportada")
+
+	return {
+		"ok": true,
+		"mensaje": "",
+		"datos": parsed_data
+	}
+
+
+func guardar_escena(contenedor: Node = null, project_id: String = DEFAULT_PROJECT_ID) -> Dictionary:
+	var load_result := cargar_proyecto(project_id)
+	var datos: Dictionary
+
+	if load_result["ok"]:
+		datos = load_result["datos"]
+	elif load_result["mensaje"] == "no existe":
+		datos = crear_proyecto_vacio()
+	else:
+		return load_result
+
+	var objetos: Array[Dictionary] = []
+	for node in get_tree().get_nodes_in_group("persistible"):
+		if contenedor != null and not contenedor.is_ancestor_of(node):
+			continue
+		if not node.has_method("serialize"):
+			push_error("El nodo persistible no implementa serialize(): " + node.name)
+			continue
+
+		var serialized = node.serialize()
+		if serialized is Dictionary:
+			objetos.append(serialized)
+
+	datos["objetos"] = objetos
+	return guardar_proyecto(datos, project_id)
+
+
+func _error_result(message: String) -> Dictionary:
+	return {
+		"ok": false,
+		"mensaje": message,
+		"datos": {}
+	}
