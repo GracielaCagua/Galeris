@@ -7,7 +7,7 @@ Este módulo implementa el sistema de construcción de espacios arquitectónicos
 ## 📁 Estructura de Archivos Creados
 
 ```text
-Godot/
+godot/
 ├── scenes/
 │   └── construction/
 │       ├── Wall.tscn                # Escena de pared 3D con colisión y material dinámico
