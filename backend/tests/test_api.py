@@ -1,6 +1,13 @@
 from fastapi.testclient import TestClient
 
 from app.main import create_app
+from app.database import default_database_url
+
+
+def test_default_database_url_uses_postgresql(monkeypatch):
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+
+    assert default_database_url().startswith("postgresql+psycopg://")
 
 
 def test_resource_lifecycle_and_project_persistence(tmp_path):

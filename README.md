@@ -8,7 +8,7 @@ recursos y proyectos, y un editor 3D desarrollado con Godot.
 ```text
 Galeris/
 ├── frontend/   # React + Vite + Three.js
-├── backend/    # FastAPI + SQLAlchemy + SQLite
+├── backend/    # FastAPI + SQLAlchemy + PostgreSQL
 ├── godot/      # Editor y visualización 3D
 └── docs/       # Documentación del proyecto
 ```
@@ -30,16 +30,23 @@ La aplicación estará disponible normalmente en `http://localhost:5173`.
 
 ### Backend
 
-La API FastAPI está en `backend/` y persiste metadatos y proyectos con SQLite.
-Los archivos se almacenan en disco.
+La API FastAPI está en `backend/` y persiste metadatos y proyectos en
+PostgreSQL. Los archivos se almacenan en disco. Copia `.env.example` a `.env`
+en la raíz, ajustando la contraseña para tu entorno. Las credenciales de
+ejemplo son solo para desarrollo local.
 
 ```powershell
+docker compose up -d postgres
 cd backend
 py -m venv .venv
 .venv\Scripts\Activate.ps1
 py -m pip install -r requirements.txt
 py -m uvicorn app.main:app --reload
 ```
+
+El backend lee `DATABASE_URL` del entorno y usa PostgreSQL por defecto en
+`localhost:5432` (`galeris`). `docker compose` conserva la base en un volumen
+llamado `galeris_postgres_data`.
 
 La API queda disponible en `http://127.0.0.1:8000` y su documentación en
 `http://127.0.0.1:8000/docs`.
