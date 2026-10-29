@@ -13,11 +13,11 @@ from app.storage import LocalFileStorage
 
 def create_app(database_url: str | None = None, storage_dir: str | Path | None = None) -> FastAPI:
     engine, session_factory = create_database(database_url or default_database_url())
-    Base.metadata.create_all(bind=engine)
     storage = LocalFileStorage(storage_dir or os.getenv("GALLERY_STORAGE_DIR", "./storage"))
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
+        Base.metadata.create_all(bind=engine)
         yield
         engine.dispose()
 

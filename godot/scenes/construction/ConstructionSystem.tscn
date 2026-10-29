@@ -1,0 +1,26 @@
+[gd_scene format=3 uid="uid://csys34rootscene01"]
+
+[ext_resource type="Script" path="res://scripts/construction/ConstructionSystem.gd" id="1_csys"]
+[ext_resource type="Script" path="res://scripts/construction/GridSnapping.gd" id="2_grid"]
+[ext_resource type="Script" path="res://scripts/construction/EditorCamera.gd" id="3_cam"]
+[ext_resource type="PackedScene" uid="uid://bvfloordefault01" path="res://scenes/construction/Floor.tscn" id="4_floor"]
+[ext_resource type="PackedScene" uid="uid://cui34construction01" path="res://scenes/construction/ConstructionUI.tscn" id="5_ui"]
+[ext_resource type="PackedScene" uid="uid://bvwalldefault01" path="res://scenes/construction/Wall.tscn" id="6_wall"]
+
+[node name="ConstructionSystem" type="Node3D" groups=["construction_system"]]
+script = ExtResource("1_csys")
+wall_scene = ExtResource("6_wall")
+floor_scene = ExtResource("4_floor")
+
+[node name="BaseFloor" parent="." instance=ExtResource("4_floor")]
+
+[node name="WallsContainer" type="Node3D" parent="."]
+
+[node name="GridSnapping" type="Node3D" parent="."]
+script = ExtResource("2_grid")
+
+[node name="EditorCamera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.707107, 0.707107, 0, -0.707107, 0.707107, 0, 15, 15)
+script = ExtResource("3_cam")
+
+[node name="ConstructionUI" parent="." instance=ExtResource("5_ui")]

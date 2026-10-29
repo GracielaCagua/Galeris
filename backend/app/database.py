@@ -4,6 +4,9 @@ from pathlib import Path
 from fastapi import Request
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 class Base(DeclarativeBase):
@@ -17,7 +20,7 @@ def create_database(database_url: str):
         if database_path != ":memory:":
             Path(database_path).parent.mkdir(parents=True, exist_ok=True)
 
-    engine = create_engine(database_url, connect_args=connect_args)
+    engine = create_engine(database_url, connect_args=connect_args, pool_pre_ping=True)
     return engine, sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
 
 
@@ -28,4 +31,7 @@ def get_session(request: Request):
 
 
 def default_database_url() -> str:
-    return os.getenv("DATABASE_URL", "sqlite:///./data/gallery.db")
+    return os.getenv(
+        "DATABASE_URL",
+        "postgresql+psycopg://galeris:galeris@localhost:5432/galeris",
+    )
