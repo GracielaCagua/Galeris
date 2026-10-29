@@ -97,6 +97,7 @@ func save_scene(container: Node = null, project_id: String = DEFAULT_PROJECT_ID)
 		return load_result
 
 	var objetos: Array[Dictionary] = []
+	var paredes: Array[Dictionary] = []
 	for node in get_tree().get_nodes_in_group("persistible"):
 		if container != null and not container.is_ancestor_of(node):
 			continue
@@ -106,10 +107,39 @@ func save_scene(container: Node = null, project_id: String = DEFAULT_PROJECT_ID)
 
 		var serialized = node.serialize()
 		if serialized is Dictionary:
-			objetos.append(serialized)
+			if node.is_in_group("pared"):
+				paredes.append(serialized)
+			else:
+				objetos.append(serialized)
 
 	datos["objetos"] = objetos
+	datos["paredes"] = paredes
 	return save_project(datos, project_id)
+
+
+func load_scene(container: Node, project_id: String = DEFAULT_PROJECT_ID) -> Dictionary:
+	var result := load_project(project_id)
+	if not result["ok"]:
+		if result["mensaje"] == "no existe":
+			return {"ok": true, "mensaje": "", "datos": create_empty_project()}
+		return result
+
+	var wall_script = load("res://scripts/core/Wall.gd")
+	for child in container.get_children():
+		if child.is_in_group("pared"):
+			container.remove_child(child)
+			child.queue_free()
+	var walls = result["datos"].get("paredes", [])
+	if not (walls is Array):
+		return _error_result("la colección paredes debe ser una lista")
+	for wall_data in walls:
+		if not (wall_data is Dictionary):
+			continue
+		var wall: Node3D = wall_script.new()
+		wall.name = "Pared_" + str(wall_data.get("id", "sin_id"))
+		container.add_child(wall)
+		wall.deserialize(wall_data)
+	return result
 
 
 func _error_result(message: String) -> Dictionary:
