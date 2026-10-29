@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://cj2e0qbbkumfl"]
 
 [ext_resource type="Script" uid="uid://cmqyke7q4kfnx" path="res://scripts/core/Main.gd" id="1_elqb8"]
-[ext_resource type="PackedScene" uid="uid://csys34rootscene01" path="res://scenes/construction/ConstructionSystem.tscn" id="2_csys"]
+[ext_resource type="PackedScene" uid="uid://d076kc80si261" path="res://scenes/construction/ConstructionSystem.tscn" id="2_csys"]
 [ext_resource type="Script" uid="uid://mv2rhyawhp7g" path="res://scenes/cubo.gd" id="3_rvslj"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_jdlef"]
@@ -18,6 +18,7 @@ script = ExtResource("1_elqb8")
 
 [node name="Camera3D" type="Camera3D" parent="World" unique_id=1755322706]
 transform = Transform3D(1, 0, 0, 0, 0.9848077, 0.17364818, 0, -0.17364818, 0.9848077, 0, 2, 6)
+cull_mask = 915431
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="World" unique_id=942648590]
 
@@ -37,7 +38,7 @@ shape = SubResource("BoxShape3D_jdlef")
 
 [node name="Editor" type="Node3D" parent="." unique_id=469739020]
 
-[node name="ConstructionSystem" parent="Editor" instance=ExtResource("2_csys")]
+[node name="ConstructionSystem" parent="Editor" unique_id=1420749850 instance=ExtResource("2_csys")]
 
 [node name="Systems" type="Node3D" parent="." unique_id=1903909664]
 
