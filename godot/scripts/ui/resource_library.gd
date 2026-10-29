@@ -36,10 +36,20 @@ func _ready() -> void:
 	_search.text_changed.connect(func(_t): _render())
 	v.add_child(_search)
 
+	var btn_row := HBoxContainer.new()
+	v.add_child(btn_row)
+
+	var upload_btn := Button.new()
+	upload_btn.text = "+ Subir imagen"
+	upload_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	upload_btn.pressed.connect(_on_upload_pressed)
+	btn_row.add_child(upload_btn)
+
 	var refresh_btn := Button.new()
 	refresh_btn.text = "Actualizar"
+	refresh_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	refresh_btn.pressed.connect(refresh)
-	v.add_child(refresh_btn)
+	btn_row.add_child(refresh_btn)
 
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -52,6 +62,30 @@ func _ready() -> void:
 	scroll.add_child(_grid)
 
 	refresh()
+
+
+func _on_upload_pressed() -> void:
+	var dlg := FileDialog.new()
+	dlg.title = "Subir imagen a la biblioteca"
+	dlg.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+	dlg.access = FileDialog.ACCESS_FILESYSTEM
+	dlg.filters = PackedStringArray(["*.jpg, *.jpeg, *.png, *.webp ; Imágenes"])
+	dlg.size = Vector2i(800, 500)
+	dlg.file_selected.connect(func(path: String):
+		if get_node_or_null("/root/Api"):
+			await get_node("/root/Api").upload_image(path)
+			refresh()
+		# También se emite como recurso local directo para colocar de inmediato
+		resource_chosen.emit({
+			"name": path.get_file().get_basename(),
+			"type": "image",
+			"file_path": path,
+			"file_url": path
+		})
+		dlg.queue_free()
+	)
+	add_child(dlg)
+	dlg.popup_centered()
 
 
 ## Vuelve a pedir los recursos al backend y reconstruye categorías y cuadrícula.
@@ -100,9 +134,13 @@ func _add_card(r: Dictionary) -> void:
 	b.pressed.connect(func(): resource_chosen.emit(r))
 	_grid.add_child(b)
 
-	var thumb := str(r.get("thumbnail_path", ""))
+	var thumb := str(r.get("thumbnail_url", r.get("thumbnail_path", r.get("file_url", r.get("file_path", "")))))
 	if thumb != "":
-		var img: Image = await Api.download_image(Api.file_url(thumb))
+		var img: Image = null
+		if thumb.begins_with("http") or thumb.begins_with("/"):
+			img = await Api.download_image(Api.file_url(thumb))
+		elif FileAccess.file_exists(thumb):
+			img = Image.load_from_file(thumb)
 		# El botón pudo borrarse mientras se descargaba (si se filtró de nuevo).
 		if img != null and is_instance_valid(b):
 			b.icon = ImageTexture.create_from_image(img)

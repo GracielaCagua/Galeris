@@ -1,8 +1,7 @@
-## Gestor de obras: importar, colocar, mover, escalar y eliminar cuadros.
+## Gestor de obras: subir, colocar, mover, escalar y formatear cuadros.
 ##
 ## Se coloca como nodo [Node3D] en la escena del editor. Las obras son sus hijas.
-## Todas las acciones están bloqueadas fuera del Modo crear mediante
-## [method GameState.can_edit].
+## Todas las acciones están bloqueadas fuera del Modo crear.
 class_name ArtworkManager
 extends Node3D
 
@@ -29,7 +28,7 @@ var _dialog: FileDialog
 
 func _ready() -> void:
 	_dialog = FileDialog.new()
-	_dialog.title = "Elegir obra de arte"
+	_dialog.title = "Subir imagen para cuadro"
 	_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
 	_dialog.access = FileDialog.ACCESS_FILESYSTEM
 	_dialog.filters = PackedStringArray(["*.jpg, *.jpeg, *.png, *.webp ; Imágenes"])
@@ -37,27 +36,38 @@ func _ready() -> void:
 	_dialog.file_selected.connect(_on_file_selected)
 	add_child(_dialog)
 
-	GameState.mode_changed.connect(_on_mode_changed)
+	if Engine.has_singleton("AppManager") or get_node_or_null("/root/AppManager"):
+		get_node("/root/AppManager").modo_cambiado.connect(_on_mode_changed)
+	elif get_node_or_null("/root/GameState"):
+		get_node("/root/GameState").mode_changed.connect(_on_mode_changed)
+
+
+func _can_edit() -> bool:
+	if Engine.has_singleton("AppManager") or get_node_or_null("/root/AppManager"):
+		return get_node("/root/AppManager").puede_editar()
+	if get_node_or_null("/root/GameState"):
+		return get_node("/root/GameState").can_edit()
+	return true
 
 
 ## Al salir del Modo crear se cancela todo lo que esté en curso.
-func _on_mode_changed(_mode: int) -> void:
-	if not GameState.can_edit():
+func _on_mode_changed(_mode = null) -> void:
+	if not _can_edit():
 		cancel_placing()
 		_select(null)
 
 
 # ===================== API pública (la usa la interfaz) =====================
 
-## Abre el explorador de archivos para elegir una imagen (JPG, PNG o WEBP).
+## Abre el explorador de archivos para subir una imagen (JPG, PNG o WEBP).
 func open_import() -> void:
-	if GameState.can_edit():
+	if _can_edit():
 		_dialog.popup_centered()
 
 
 ## Deja una imagen lista para colgarla con el siguiente clic sobre una pared.
 func start_placing(img: Image, source: String) -> void:
-	if not GameState.can_edit():
+	if not _can_edit():
 		return
 	_pending_img = img
 	_pending_src = source
@@ -72,13 +82,25 @@ func cancel_placing() -> void:
 
 ## Cambia el ancho de la obra seleccionada (en metros).
 func set_selected_width(w: float) -> void:
-	if GameState.can_edit() and selected:
+	if _can_edit() and selected:
 		selected.set_width(w)
+
+
+## Cambia el formato de proporción del cuadro seleccionado.
+func set_selected_format(fmt: String) -> void:
+	if _can_edit() and selected:
+		selected.set_format(fmt)
+
+
+## Cambia el estilo del marco del cuadro seleccionado.
+func set_selected_frame_style(style: String) -> void:
+	if _can_edit() and selected:
+		selected.set_frame_style(style)
 
 
 ## Elimina la obra seleccionada.
 func delete_selected() -> void:
-	if GameState.can_edit() and selected:
+	if _can_edit() and selected:
 		var art := selected
 		_select(null)
 		art.queue_free()
@@ -101,7 +123,7 @@ func load_from(data: Array) -> void:
 			c.queue_free()
 
 	for d in data:
-		var src := str(d.get("source", ""))
+		var src := str(d.get("source", d.get("recurso", "")))
 		var img: Image = null
 		if src.begins_with("http"):
 			img = await Api.download_image(src)
@@ -113,29 +135,40 @@ func load_from(data: Array) -> void:
 		var art := Artwork.new()
 		art.set_image(img, src)
 		art.set_width(float(d.get("width", 1.0)))
+		if d.has("format"):
+			art.set_format(str(d.get("format")))
+		if d.has("frame_style"):
+			art.set_frame_style(str(d.get("frame_style")))
 		add_child(art)
 
-		var p: Array = d.get("position", [0, 0, 0])
-		var r: Array = d.get("rotation", [0, 0, 0])
+		var p: Array = d.get("position", d.get("posicion", [0, 0, 0]))
+		var r: Array = d.get("rotation", d.get("rotacion", [0, 0, 0]))
 		art.position = Vector3(p[0], p[1], p[2])
 		art.rotation = Vector3(r[0], r[1], r[2])
 
 
 # ============================== Entrada ==============================
 
-## Se llama al elegir un archivo en el diálogo de importación.
+## Se llama al elegir un archivo en el diálogo de importación / subida.
 func _on_file_selected(path: String) -> void:
 	var img := Image.load_from_file(path)
 	if img == null or img.is_empty():
 		push_warning("No se pudo cargar la imagen: " + path)
 		return
 	start_placing(img, path)
+	# Subida opcional al backend en segundo plano si está disponible
+	if get_node_or_null("/root/Api"):
+		get_node("/root/Api").upload_image(path)
 
 
 ## Maneja mouse y teclado. Usa _unhandled_input para no interferir con los botones de la UI.
 func _unhandled_input(event: InputEvent) -> void:
-	# Candado principal: en Modo visualizar no se procesa nada.
-	if not GameState.can_edit() or camera == null:
+	if not _can_edit():
+		return
+
+	if camera == null:
+		camera = get_viewport().get_camera_3d()
+	if camera == null:
 		return
 
 	if event is InputEventMouseButton:
@@ -197,8 +230,11 @@ func _select(art: Artwork) -> void:
 
 
 ## Lanza un rayo desde el mouse y devuelve el primer choque en las capas de [param mask].
-## Devuelve un diccionario vacío si no golpea nada.
 func _raycast(mask: int) -> Dictionary:
+	if camera == null:
+		camera = get_viewport().get_camera_3d()
+	if camera == null:
+		return {}
 	var mp := get_viewport().get_mouse_position()
 	var from := camera.project_ray_origin(mp)
 	var to := from + camera.project_ray_normal(mp) * 100.0
