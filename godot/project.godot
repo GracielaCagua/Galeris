@@ -19,6 +19,7 @@ config/icon="res://icon.svg"
 AppManager="*uid://dfoxqkyrx6kro"
 ProjectManager="*uid://ctcu21vx8gjn8"
 EditorController="*uid://dheauil2f67s5"
+Api="*res://scripts/core/api.gd"
 
 [display]
 
