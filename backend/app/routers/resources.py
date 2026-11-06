@@ -4,11 +4,13 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Uplo
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from starlette.datastructures import UploadFile as StarletteUploadFile
 
 from app.database import get_session
 from app.models import Resource
 from app.schemas import ResourceRead
 from app.storage import LocalFileStorage
+from app.resource_files import FOLDER_BY_TYPE, ResourceType, resolve_resource_type, validate_thumbnail
 
 router = APIRouter(prefix="/api/resources", tags=["resources"])
 
@@ -39,22 +41,27 @@ def upload_resource(
     request: Request,
     file: UploadFile = File(...),
     name: str = Form(..., min_length=1, max_length=255),
-    type: str = Form(..., min_length=1, max_length=80),
+    type: ResourceType | None = Form(None),
     category: str = Form("general", max_length=120),
-    thumbnail: UploadFile | None = File(None),
+    thumbnail: UploadFile | str | None = File(None),
     session: Session = Depends(get_session),
 ):
     storage: LocalFileStorage = request.app.state.storage
+    resource_type = resolve_resource_type(file, type)
+    # Los formularios envían un campo vacío cuando no se elige miniatura.
+    thumbnail = thumbnail if isinstance(thumbnail, StarletteUploadFile) and thumbnail.filename else None
+    if thumbnail:
+        validate_thumbnail(thumbnail)
     saved_paths: list[str] = []
     try:
-        resource_path = storage.save(file, "resources")
+        resource_path = storage.save(file, FOLDER_BY_TYPE[resource_type])
         saved_paths.append(resource_path)
         thumbnail_path = storage.save(thumbnail, "thumbnails") if thumbnail else None
         if thumbnail_path:
             saved_paths.append(thumbnail_path)
         resource = Resource(
             name=name,
-            type=type,
+            type=resource_type,
             category=category or "general",
             path=resource_path,
             thumbnail_path=thumbnail_path,
