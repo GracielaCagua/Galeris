@@ -5,7 +5,7 @@
 - `frontend/`: editor web React/Vite/Three.js. Se ejecuta de forma
   independiente y exporta escenas JSON.
 - `backend/`: API FastAPI con SQLAlchemy. Gestiona recursos, miniaturas y
-  proyectos en PostgreSQL; el almacenamiento binario permanece en disco.
+  proyectos; el almacenamiento binario permanece en disco.
 - `godot/`: editor y visualizador 3D. Contiene las escenas de construcción y
   los autoloads `AppManager`, `EditorController` y `ProjectManager`.
 
@@ -17,9 +17,7 @@
 4. Los proyectos pueden guardarse localmente en el formato compartido de
    `godot/data/formato_proyecto.json`.
 
-## Base de datos
+## Backend y datos
 
-PostgreSQL es el motor predeterminado del backend. La conexión se configura con
-`DATABASE_URL`; para desarrollo local, `compose.yaml` inicia PostgreSQL con
-persistencia en el volumen `galeris_postgres_data`. El esquema se crea al
-iniciar la API.
+PostgreSQL guarda los metadatos y las rutas; los archivos quedan en carpetas.
+La configuración y la migración a la nube se describen en `docs/backend.md`.
