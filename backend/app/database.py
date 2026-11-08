@@ -21,6 +21,21 @@ def create_database(database_url: str):
     return engine, sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
 
 
+def ensure_owner_columns(engine) -> None:
+    """Añade ``owner_id`` a bases de datos SQLite creadas antes de existir usuarios."""
+
+    if engine.dialect.name != "sqlite":
+        return
+    with engine.begin() as connection:
+        for table in ("resources", "projects"):
+            columns = {
+                row[1] for row in connection.exec_driver_sql(f"PRAGMA table_info({table})")
+            }
+            if columns and "owner_id" not in columns:
+                connection.exec_driver_sql(f"ALTER TABLE {table} ADD COLUMN owner_id INTEGER")
+
+
+
 def get_session(request: Request):
     session_factory = request.app.state.session_factory
     with session_factory() as session:
