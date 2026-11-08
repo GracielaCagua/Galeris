@@ -8,7 +8,7 @@ recursos y proyectos, y un editor 3D desarrollado con Godot.
 ```text
 Galeris/
 ├── frontend/   # React + Vite + Three.js
-├── backend/    # FastAPI + SQLAlchemy + SQLite
+├── backend/    # FastAPI + SQLAlchemy + PostgreSQL
 ├── godot/      # Editor y visualización 3D
 └── docs/       # Documentación del proyecto
 ```
@@ -33,6 +33,10 @@ La aplicación estará disponible normalmente en `http://localhost:5173`.
 
 La API FastAPI está en `backend/` y persiste metadatos, usuarios y proyectos con
 SQLite. Los archivos se almacenan en disco.
+
+> **PostgreSQL es la base de datos predeterminada.** Antes de iniciar la API hay
+> que prepararla. Los pasos, los endpoints y la configuración están en
+> [`docs/backend.md`](docs/backend.md).
 
 ```powershell
 cd backend

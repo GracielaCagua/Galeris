@@ -7,8 +7,8 @@ extends Node
 ## Dirección donde corre el backend (uvicorn).
 const BASE_URL := "http://127.0.0.1:8000"
 
-## Ruta que lista los recursos. AJUSTAR según backend/app/main.py.
-const RESOURCES_ENDPOINT := "/resources"
+## Ruta que lista los recursos en la API de FastAPI.
+const RESOURCES_ENDPOINT := "/api/resources"
 
 
 ## Convierte una ruta relativa del backend en una URL completa.
@@ -38,7 +38,18 @@ func list_resources() -> Array:
 		return []
 
 	var data = JSON.parse_string((res[3] as PackedByteArray).get_string_from_utf8())
-	return data if data is Array else []
+	return data.map(_to_library_entry) if data is Array else []
+
+
+## La biblioteca descarga file_path y thumbnail_path, así que deben ser las URLs
+## del backend. Una miniatura nula se quita porque str(null) sería "<null>".
+func _to_library_entry(resource: Dictionary) -> Dictionary:
+	var thumbnail = resource.get("thumbnail_url")
+	resource["file_path"] = resource.get("file_url", "")
+	resource["thumbnail_path"] = thumbnail if thumbnail != null else ""
+	if thumbnail == null:
+		resource.erase("thumbnail_url")
+	return resource
 
 
 ## Descarga una imagen (PNG, JPG o WEBP) desde [param url].

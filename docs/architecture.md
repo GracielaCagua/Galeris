@@ -28,3 +28,8 @@ administrador. El detalle del modo administrador está en
 5. Godot consulta los recursos mediante `scripts/core/api.gd`.
 6. Los proyectos pueden guardarse localmente en el formato compartido de
    `godot/data/formato_proyecto.json`.
+
+## Backend y datos
+
+PostgreSQL guarda los metadatos y las rutas; los archivos quedan en carpetas.
+La configuración y la migración a la nube se describen en `docs/backend.md`.
