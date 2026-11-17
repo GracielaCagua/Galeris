@@ -759,9 +759,16 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
     if (initialProject && sceneRef.current) {
       setProjectId(initialProject.id);
       setProjectName(initialProject.name);
-      loadProjectScene(initialProject).catch((error) => notify(error.message || "No se pudo cargar el proyecto."));
+      if (session.user?.role === "admin") setMode("view");
+      api.getProject(session.access_token, initialProject.id)
+        .then((project) => {
+          setProjectId(project.id);
+          setProjectName(project.name);
+          return loadProjectScene(project);
+        })
+        .catch((error) => notify(error.message || "No se pudo cargar el proyecto del usuario."));
     }
-  }, [initialProject]);
+  }, [initialProject, session.access_token, session.user?.role]);
 
   useEffect(() => {
     let cancelled = false;
