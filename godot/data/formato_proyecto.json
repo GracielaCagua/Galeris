@@ -1,32 +1,44 @@
-
 {
   "version": 1,
-  "nombre_proyecto": "Nuevo proyecto",
+  "nombre_proyecto": "Galería Facultad de Artes",
+  "recursos": {
+    "imagenes": {
+      "obra_luz": "imagen-obra-luz"
+    },
+    "modelos": {
+      "escultura_01": "modelo-escultura-01"
+    }
+  },
   "paredes": [
-	{
-	  "id": "pared_1",
-	  "posicion": [0.0, 0.0, 0.0],
-	  "rotacion": [0.0, 0.0, 0.0],
-	  "escala": [1.0, 1.0, 1.0],
-	  "dimensiones": [4.0, 3.0, 0.2]
-	}
+    {
+      "id": "pared_entrada",
+      "inicio": [0.0, -3.0],
+      "fin": [4.0, -3.0],
+      "alto": 3.0,
+      "grosor": 0.2
+    }
   ],
+  "piso": {
+    "id": "piso_principal",
+    "dimensiones": [10.0, 10.0]
+  },
   "obras": [
-	{
-	  "id": "obra_1",
-	  "recurso": "res://assets/obras/obra_1.png",
-	  "posicion": [0.0, 1.5, -1.0],
-	  "rotacion": [0.0, 0.0, 0.0],
-	  "escala": [1.0, 1.0, 1.0]
-	}
+    {
+      "id": "obra_01",
+      "imagen_id": "obra_luz",
+      "pared_id": "pared_entrada",
+      "posicion": [2.0, 1.5, -2.85],
+      "rotacion": [0.0, 0.0, 0.0],
+      "escala": [1.0, 1.0, 1.0]
+    }
   ],
   "objetos": [
-	{
-	  "id": "objeto_1",
-	  "modelo": "res://assets/modelos/modelo.glb",
-	  "posicion": [1.0, 0.0, 1.0],
-	  "rotacion": [0.0, 0.0, 0.0],
-	  "escala": [1.0, 1.0, 1.0]
-	}
+    {
+      "id": "objeto_01",
+      "modelo_id": "escultura_01",
+      "posicion": [1.0, 0.0, 1.0],
+      "rotacion": [0.0, 0.0, 0.0],
+      "escala": [1.0, 1.0, 1.0]
+    }
   ]
 }

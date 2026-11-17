@@ -11,12 +11,13 @@ config_version=5
 [application]
 
 config/name="Editor3D_FacultadArtes"
+run/main_scene="uid://cj2e0qbbkumfl"
 config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://icon.svg"
 
 [autoload]
 
-AppManager="*uid://dfoxqkyrx6kro"
+AppMode="*res://scripts/core/AppMode.gd"
 ProjectManager="*uid://ctcu21vx8gjn8"
 EditorController="*uid://dheauil2f67s5"
 Api="*res://scripts/core/api.gd"
