@@ -524,7 +524,13 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
   const placeResource = (resource) => {
     if (mode === "view") return notify("Cambia a Crear o Editar para modificar la escena.");
     const object = resource.factory ? resource.factory() : createPrimitive(resource.type);
-    object.userData = { modelId: resource.id, resourceId: resource.id, modelName: resource.name, instanceId: `instance-${Date.now()}-${objectsRef.current.length + 1}` };
+    object.userData = {
+      modelId: resource.id,
+      resourceId: resource.id,
+      resourceType: resource.type || null,
+      modelName: resource.name,
+      instanceId: `instance-${Date.now()}-${objectsRef.current.length + 1}`
+    };
     object.position.set((objectsRef.current.length % 3 - 1) * 1.8, 0.7, Math.floor(objectsRef.current.length / 3) * 1.5);
     sceneRef.current.add(object);
     objectsRef.current.push(object);
@@ -608,7 +614,8 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
       canvas: { blocksX: canvasSize.x, blocksZ: canvasSize.z, blockSize: 1 },
       objects: objectsRef.current.filter((object) => !object.userData.boundaryWall).map((object) => ({
         instanceId: object.userData.instanceId, modelId: object.userData.modelId,
-        type: object.userData.wall ? "wall" : "object",
+          resourceType: object.userData.resourceType || object.userData.type || null,
+          type: object.userData.wall ? "wall" : "object",
         width: object.userData.width, height: object.userData.height,
         hasCollision: Boolean(object.userData.hasCollision),
         position: { x: round(object.position.x), y: round(object.position.y), z: round(object.position.z) },
@@ -633,6 +640,7 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
       modelId: object.userData.modelId,
       modelName: object.userData.modelName,
       resourceId: object.userData.resourceId || null,
+      resourceType: object.userData.resourceType || object.userData.type || null,
       type: object.userData.wall ? "wall" : "object",
       width: object.userData.width, height: object.userData.height,
       hasCollision: Boolean(object.userData.hasCollision),
@@ -684,17 +692,40 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
       if (saved.boundaryWall) continue;
       if (saved.type === "wall") {
         object = createWall(saved.width || 4, saved.height || 3);
-        object.userData = { ...saved, wall: true, modelName: saved.modelName || "Pared", hasCollision: true };
+        object.userData = {
+          ...saved,
+          wall: true,
+          modelName: saved.modelName || "Pared",
+          hasCollision: true,
+          collision: { enabled: true, type: "box", width: saved.width || 4, height: saved.height || 3, thickness: 0.2 }
+        };
       } else {
-        const resource = resourcesById.get(String(saved.resourceId || saved.modelId));
+        const resource = resourcesById.get(String(saved.resourceId || saved.modelId)) || (
+          saved.resourceType === "cube" || saved.resourceType === "sphere"
+            ? { id: saved.modelId, name: saved.modelName || "Objeto de prueba", type: saved.resourceType }
+            : null
+        );
         if (!resource) continue;
         if (resource.factory) {
           object = resource.factory();
+        } else if (resource.type === "cube" || resource.type === "sphere" || saved.resourceType === "cube" || saved.resourceType === "sphere") {
+          object = createPrimitive(resource.type || saved.resourceType);
         } else if (resource.fileUrl) {
-          object = await new Promise((resolve, reject) => loaderRef.current.load(resource.fileUrl, (gltf) => resolve(gltf.scene), undefined, reject));
+          try {
+            object = await new Promise((resolve, reject) => loaderRef.current.load(resource.fileUrl, (gltf) => resolve(gltf.scene), undefined, reject));
+          } catch {
+            notify(`No se pudo restaurar "${saved.modelName || resource.name}".`);
+            continue;
+          }
         }
         if (!object) continue;
-        object.userData = { ...saved, modelId: resource.id, modelName: resource.name };
+        object.userData = {
+          ...saved,
+          modelId: resource.id,
+          modelName: resource.name,
+          resourceId: resource.id,
+          resourceType: resource.type
+        };
       }
       object.position.set(saved.position?.x || 0, saved.position?.y || 0, saved.position?.z || 0);
       object.rotation.set(saved.rotation?.x || 0, saved.rotation?.y || 0, saved.rotation?.z || 0);
