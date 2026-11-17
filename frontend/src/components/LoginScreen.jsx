@@ -143,13 +143,6 @@ export default function LoginScreen({ onLogin, notice }) {
             {registering ? "¿Ya tienes una cuenta? Inicia sesión" : "¿No tienes cuenta? Crea una como usuario"}
           </button>
 
-          {!registering && import.meta.env.DEV && (
-            <div className="demo-credentials">
-              <p className="eyebrow">ACCESO DE DEMOSTRACIÓN</p>
-              <p><code>admin</code> / <code>admin123</code> · administrador</p>
-              <p><code>marc</code> / <code>galeris123</code> · usuario</p>
-            </div>
-          )}
         </div>
       </section>
     </main>
