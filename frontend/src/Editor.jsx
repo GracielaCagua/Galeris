@@ -40,7 +40,8 @@ function createBoundaryWall(name, width, height, position, rotation = 0) {
     modelName: name,
     instanceId: `boundary-${name}`,
     boundaryWall: true,
-    collision: { type: "box", width, height, thickness: 0.2 }
+    hasCollision: true,
+    collision: { enabled: true, type: "box", width, height, thickness: 0.2 }
   };
   return wall;
 }
@@ -356,6 +357,20 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
     wall.scale.z = 1;
   };
 
+  const constrainObjectToCanvas = (object) => {
+    if (!object || object.userData.boundaryWall) return;
+    object.updateMatrixWorld(true);
+    const bounds = new THREE.Box3().setFromObject(object);
+    const halfX = canvasSize.x / 2 - 0.1;
+    const halfZ = canvasSize.z / 2 - 0.1;
+    const correction = new THREE.Vector3();
+    if (bounds.min.x < -halfX) correction.x = -halfX - bounds.min.x;
+    if (bounds.max.x > halfX) correction.x = halfX - bounds.max.x;
+    if (bounds.min.z < -halfZ) correction.z = -halfZ - bounds.min.z;
+    if (bounds.max.z > halfZ) correction.z = halfZ - bounds.max.z;
+    object.position.add(correction);
+  };
+
   const keepObjectOnFloor = (object) => {
     if (!object || object.userData.canvasFloor) return;
     if (object.userData.wall) {
@@ -364,11 +379,13 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
         return;
       }
       snapWall(object);
+      constrainObjectToCanvas(object);
       return;
     }
     object.updateMatrixWorld(true);
     const bounds = new THREE.Box3().setFromObject(object);
     if (bounds.min.y < 0) object.position.y += -bounds.min.y;
+    constrainObjectToCanvas(object);
   };
 
   const removeBoundaryWalls = () => {
