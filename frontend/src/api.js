@@ -110,6 +110,8 @@ export const api = {
     request(`/api/projects/${projectId}`, { method: "PUT", token, body: payload }),
   getProject: (token, projectId) => request(`/api/projects/${projectId}`, { token }),
   listResources: (token) => request("/api/resources", { token }),
+  deleteResource: (token, resourceId) =>
+    request(`/api/resources/${resourceId}`, { method: "DELETE", token }),
   uploadResource,
   resourceFileUrl: (resource) => `${API_URL}${resource.file_url}`,
   listUsers: (token, { search = "", role = "", active = "", limit = 25, offset = 0 } = {}) => {

@@ -61,6 +61,9 @@ h2 { font-size: 14px; margin: 0; letter-spacing: -.01em; }
 .resource-card, .scene-item { border: 1px solid var(--border); background: var(--panel-2); border-radius: 7px; padding: 9px; display: flex; align-items: center; gap: 9px; min-width: 0; }
 .resource-card { cursor: pointer; }
 .resource-card:hover { border-color: var(--accent-dark); }
+.resource-delete { margin-left: auto; border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 19px; line-height: 1; padding: 2px 4px; }
+.resource-delete:hover { color: var(--danger); }
+.resource-delete:disabled { cursor: not-allowed; opacity: .45; }
 .resource-icon { width: 31px; height: 31px; display: grid; place-items: center; border-radius: 6px; color: var(--accent); background: #23301c; font-size: 13px; flex: 0 0 auto; }
 .resource-info, .scene-info { min-width: 0; flex: 1; }
 .resource-info strong, .scene-info strong { display: block; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

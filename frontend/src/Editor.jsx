@@ -138,9 +138,11 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
 
   gizmoModeRef.current = gizmoMode;
 
+  const placedObjects = () => objectsRef.current.filter((object) => !object.userData.boundaryWall);
+
   const sync = useCallback(() => {
     const object = selectedRef.current;
-    setObjects([...objectsRef.current]);
+    setObjects(placedObjects());
     setTransformValues(object ? {
       position: object.position,
       rotation: {
@@ -173,7 +175,7 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
     setSelectedId(null);
     transformRef.current?.detach();
     setTransformValues(null);
-    setObjects([...objectsRef.current]);
+    setObjects(placedObjects());
   }, []);
 
   useEffect(() => {
@@ -525,6 +527,23 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
     notify(`${object.userData.modelName} eliminado`);
   };
 
+  const removeResource = async (resource) => {
+    if (!resource.fileUrl || mode === "view") return;
+    if (!window.confirm(`¿Eliminar "${resource.name}" de la biblioteca 3D? También se quitarán sus copias de la escena.`)) return;
+    try {
+      await api.deleteResource(session.access_token, resource.id);
+      const relatedObjects = objectsRef.current.filter((object) => object.userData.resourceId === resource.id);
+      relatedObjects.forEach((object) => sceneRef.current.remove(object));
+      objectsRef.current = objectsRef.current.filter((object) => !relatedObjects.includes(object));
+      if (relatedObjects.includes(selectedRef.current)) deselect();
+      else sync();
+      setResources((current) => current.filter((entry) => entry.id !== resource.id));
+      notify(`${resource.name} eliminado de la biblioteca`);
+    } catch (error) {
+      notify(error.message || "No se pudo eliminar el recurso.");
+    }
+  };
+
   const setTransformValue = (type, axis, value) => {
     const object = selectedRef.current;
     if (!object || mode === "view" || !Number.isFinite(Number(value))) return;
@@ -742,7 +761,7 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
             <div className="section-heading"><div><p className="eyebrow">RECURSOS</p><h2>Biblioteca 3D</h2></div><span className="count-badge">{resources.length}</span></div>
             <label className="upload-zone" htmlFor="model-input"><span className="upload-icon">＋</span><strong>Importar modelo</strong><small>GLB / glTF · arrastra o selecciona</small></label>
             <input id="model-input" type="file" accept=".glb,.gltf,.bin,model/gltf-binary,model/gltf+json" hidden onChange={(event) => loadModel(event.target.files[0])} />
-            <div className="resource-list">{resources.map((resource) => <div className="resource-card" key={resource.id} onClick={() => placeResource(resource)}><div className="resource-icon">◇</div><div className="resource-info"><strong>{resource.name}</strong><small>{resource.source}</small></div><span className="add-icon">+</span></div>)}</div>
+            <div className="resource-list">{resources.map((resource) => <div className="resource-card" key={resource.id} onClick={() => placeResource(resource)}><div className="resource-icon">◇</div><div className="resource-info"><strong>{resource.name}</strong><small>{resource.source}</small></div><span className="add-icon">+</span>{resource.fileUrl && <button className="resource-delete" type="button" aria-label={`Eliminar ${resource.name}`} title="Eliminar de la biblioteca" disabled={mode === "view"} onClick={(event) => { event.stopPropagation(); removeResource(resource); }}>×</button>}</div>)}</div>
           </section>
           <section className="panel-section">
             <div className="section-heading"><div><p className="eyebrow">ESCENA ACTUAL</p><h2>Objetos colocados</h2></div><span className="count-badge">{objects.length}</span></div>
