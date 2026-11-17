@@ -2,6 +2,8 @@
 
 [ext_resource type="Script" uid="uid://cmqyke7q4kfnx" path="res://scripts/core/Main.gd" id="1_elqb8"]
 [ext_resource type="Script" uid="uid://mv2rhyawhp7g" path="res://scenes/cubo.gd" id="2_rvslj"]
+[ext_resource type="Script" path="res://scripts/construction/LienzoSala.gd" id="3_lienzo"]
+[ext_resource type="Script" path="res://scripts/artworks/artwork_manager.gd" id="4_obras"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_jdlef"]
 size = Vector2(10, 10)
@@ -9,6 +11,9 @@ size = Vector2(10, 10)
 [sub_resource type="BoxMesh" id="BoxMesh_gbebh"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_jdlef"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_piso"]
+size = Vector3(10, 0.2, 10)
 
 [node name="Main" type="Node3D" unique_id=1061207172]
 script = ExtResource("1_elqb8")
@@ -24,6 +29,14 @@ transform = Transform3D(1, 0, 0, 0, 0.9848077, 0.17364818, 0, -0.17364818, 0.984
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6113281, 0.69317627, -0.0690918)
 mesh = SubResource("PlaneMesh_jdlef")
 
+[node name="PisoColision" type="StaticBody3D" parent="World" unique_id=910581265]
+collision_layer = 1
+collision_mask = 1
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="World/PisoColision"]
+position = Vector3(0, -0.1, 0)
+shape = SubResource("BoxShape3D_piso")
+
 [node name="Cubo" type="CharacterBody3D" parent="World" unique_id=1827754576]
 script = ExtResource("2_rvslj")
 
@@ -35,6 +48,12 @@ mesh = SubResource("BoxMesh_gbebh")
 shape = SubResource("BoxShape3D_jdlef")
 
 [node name="Objetos" type="Node3D" parent="World" unique_id=781485624]
+
+[node name="LienzoSala" type="Node3D" parent="World" unique_id=781485625]
+script = ExtResource("3_lienzo")
+
+[node name="Obras" type="Node3D" parent="World" unique_id=781485626]
+script = ExtResource("4_obras")
 
 [node name="Editor" type="Node3D" parent="." unique_id=469739020]
 

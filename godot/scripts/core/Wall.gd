@@ -10,6 +10,8 @@ var _mesh_instance: MeshInstance3D
 var _collision: CollisionShape3D
 
 func _ready() -> void:
+	collision_layer = 1
+	collision_mask = 1
 	add_to_group("persistible")
 	add_to_group("pared")
 	add_to_group("editor_tool")
@@ -50,6 +52,9 @@ func _sync_geometry() -> void:
 	box_shape.size = box_mesh.size
 	_collision.shape = box_shape
 	_collision.position = Vector3(0, height * 0.5, 0)
+
+func snap_rotation() -> void:
+	rotation.y = snappedf(rotation.y, PI * 0.5)
 
 func serialize() -> Dictionary:
 	var half := Vector3(width * 0.5, 0, 0)

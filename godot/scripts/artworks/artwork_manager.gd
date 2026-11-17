@@ -2,7 +2,7 @@
 ##
 ## Se coloca como nodo [Node3D] en la escena del editor. Las obras son sus hijas.
 ## Todas las acciones están bloqueadas fuera del Modo crear mediante
-## [method GameState.can_edit].
+## [method AppMode.can_edit].
 class_name ArtworkManager
 extends Node3D
 
@@ -32,17 +32,17 @@ func _ready() -> void:
 	_dialog.title = "Elegir obra de arte"
 	_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
 	_dialog.access = FileDialog.ACCESS_FILESYSTEM
-	_dialog.filters = PackedStringArray(["*.jpg, *.jpeg, *.png, *.webp ; Imágenes"])
+	_dialog.filters = PackedStringArray(["*.jpg, *.jpeg, *.png, *.webp, *.bmp, *.tga ; Imágenes"])
 	_dialog.size = Vector2i(800, 500)
 	_dialog.file_selected.connect(_on_file_selected)
 	add_child(_dialog)
 
-	GameState.mode_changed.connect(_on_mode_changed)
+	AppMode.mode_changed.connect(_on_mode_changed)
 
 
 ## Al salir del Modo crear se cancela todo lo que esté en curso.
 func _on_mode_changed(_mode: int) -> void:
-	if not GameState.can_edit():
+	if not AppMode.can_edit():
 		cancel_placing()
 		_select(null)
 
@@ -51,13 +51,13 @@ func _on_mode_changed(_mode: int) -> void:
 
 ## Abre el explorador de archivos para elegir una imagen (JPG, PNG o WEBP).
 func open_import() -> void:
-	if GameState.can_edit():
+	if AppMode.can_edit():
 		_dialog.popup_centered()
 
 
 ## Deja una imagen lista para colgarla con el siguiente clic sobre una pared.
 func start_placing(img: Image, source: String) -> void:
-	if not GameState.can_edit():
+	if not AppMode.can_edit():
 		return
 	_pending_img = img
 	_pending_src = source
@@ -72,13 +72,13 @@ func cancel_placing() -> void:
 
 ## Cambia el ancho de la obra seleccionada (en metros).
 func set_selected_width(w: float) -> void:
-	if GameState.can_edit() and selected:
+	if AppMode.can_edit() and selected:
 		selected.set_width(w)
 
 
 ## Elimina la obra seleccionada.
 func delete_selected() -> void:
-	if GameState.can_edit() and selected:
+	if AppMode.can_edit() and selected:
 		var art := selected
 		_select(null)
 		art.queue_free()
@@ -135,7 +135,7 @@ func _on_file_selected(path: String) -> void:
 ## Maneja mouse y teclado. Usa _unhandled_input para no interferir con los botones de la UI.
 func _unhandled_input(event: InputEvent) -> void:
 	# Candado principal: en Modo visualizar no se procesa nada.
-	if not GameState.can_edit() or camera == null:
+	if not AppMode.can_edit() or camera == null:
 		return
 
 	if event is InputEventMouseButton:

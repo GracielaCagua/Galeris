@@ -7,7 +7,7 @@ from fastapi import HTTPException, UploadFile
 
 ResourceType = Literal["image", "model3d", "blender"]
 
-IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tga"}
 EXTENSIONS_BY_TYPE: dict[str, set[str]] = {
     "image": IMAGE_EXTENSIONS,
     "model3d": {".glb", ".gltf"},
@@ -40,6 +40,6 @@ def resolve_resource_type(upload: UploadFile, requested: str | None) -> str:
 
 def validate_thumbnail(thumbnail: UploadFile) -> None:
     if _extension_of(thumbnail) not in IMAGE_EXTENSIONS:
-        raise _invalid("La miniatura debe ser una imagen JPG, PNG o WEBP")
+        raise _invalid("La miniatura debe ser una imagen JPG, JPEG, PNG, WEBP, BMP o TGA")
     if thumbnail.size == 0:
         raise _invalid("La miniatura está vacía")

@@ -7,8 +7,11 @@ extends Node3D
 @export var tamano_bloque: float = 1.0  ## cada bloque mide 1 m
 @export var alto_pared: float = 3.0
 @export var grosor_pared: float = 0.2
+var _contenido := Node3D.new()
 
 func _ready() -> void:
+	_contenido.name = "ContenidoLienzo"
+	add_child(_contenido)
 	construir()
 
 ## Cambia el tamaño del lienzo y lo reconstruye.
@@ -18,8 +21,7 @@ func set_dimensiones(x: int, z: int) -> void:
 	construir()
 
 func construir() -> void:
-	for hijo in get_children():
-		remove_child(hijo)
+	for hijo in _contenido.get_children():
 		hijo.queue_free()
 	_crear_piso()
 	_crear_paredes()
@@ -47,7 +49,7 @@ func _crear_piso() -> void:
 				-grosor / 2.0,
 				(j + 0.5) * tamano_bloque - largo / 2.0
 			)
-			add_child(mesh)
+			_contenido.add_child(mesh)
 
 	# Colisión del piso (una sola pieza)
 	var cuerpo := StaticBody3D.new()
@@ -58,7 +60,7 @@ func _crear_piso() -> void:
 	forma.shape = caja_col
 	cuerpo.position = Vector3(0.0, -grosor / 2.0, 0.0)
 	cuerpo.add_child(forma)
-	add_child(cuerpo)
+	_contenido.add_child(cuerpo)
 
 func _crear_paredes() -> void:
 	var ancho := bloques_x * tamano_bloque
@@ -77,6 +79,8 @@ func _crear_pared(nombre: String, centro: Vector3, tamano: Vector3) -> void:
 	var cuerpo := StaticBody3D.new()
 	cuerpo.name = nombre
 	cuerpo.position = centro
+	cuerpo.collision_layer = 1
+	cuerpo.collision_mask = 1
 
 	var mesh := MeshInstance3D.new()
 	var caja := BoxMesh.new()
@@ -93,4 +97,4 @@ func _crear_pared(nombre: String, centro: Vector3, tamano: Vector3) -> void:
 	forma.shape = caja_col
 	cuerpo.add_child(forma)
 
-	add_child(cuerpo)
+	_contenido.add_child(cuerpo)

@@ -2,23 +2,29 @@ extends Node3D
 
 @onready var modo_label: Label = $UI/ModoLabel
 @onready var wall_container: Node3D = $World/Objetos
+@onready var camera: Camera3D = $World/Camera3D
+@onready var artwork_manager: ArtworkManager = $World/Obras
+@onready var canvas: LienzoSala = $World/LienzoSala
 
 var _selected_wall: GalleryWall
 var _dragging := false
 var _toolbar: HBoxContainer
 var _width_input: SpinBox
 var _height_input: SpinBox
-var _camera: Camera3D
 var _wall_script = preload("res://scripts/core/Wall.gd")
 var _wall_counter := 1
+var _canvas_x_input: SpinBox
+var _canvas_z_input: SpinBox
 
 func _ready() -> void:
 	AppMode.mode_changed.connect(_on_mode_changed)
-	_camera = $World/Camera3D
+	artwork_manager.camera = camera
 	_build_wall_toolbar()
 	$UI/BotonVisualizar.pressed.connect(func(): AppMode.change_mode(AppMode.Mode.VISUALIZE))
 	$UI/BotonCrear.pressed.connect(func(): AppMode.change_mode(AppMode.Mode.CREATE))
 	ProjectManager.load_scene(wall_container)
+	_build_canvas_controls()
+	_build_artwork_button()
 	_actualizar_interfaz()
 
 	print("Modo inicial: ", AppMode.mode_name())
@@ -66,8 +72,8 @@ func _build_wall_toolbar() -> void:
 		ProjectManager.load_scene(wall_container)
 		_select(null)
 	)
-	_width_input = _add_dimension("Ancho", 4.0)
-	_height_input = _add_dimension("Alto", 3.0)
+	_width_input = _add_dimension("Ancho", 4.0, _apply_dimensions)
+	_height_input = _add_dimension("Alto", 3.0, _apply_dimensions)
 
 func _add_button(label: String, action: Callable) -> void:
 	var button := Button.new()
@@ -75,7 +81,7 @@ func _add_button(label: String, action: Callable) -> void:
 	button.pressed.connect(action)
 	_toolbar.add_child(button)
 
-func _add_dimension(label: String, initial: float) -> SpinBox:
+func _add_dimension(label: String, initial: float, action: Callable) -> SpinBox:
 	var box := SpinBox.new()
 	box.min_value = 0.1
 	box.max_value = 30.0
@@ -98,16 +104,16 @@ func _add_wall() -> void:
 	_select(wall)
 
 func _select_wall(screen_position: Vector2) -> void:
-	var from := _camera.project_ray_origin(screen_position)
-	var to := from + _camera.project_ray_normal(screen_position) * 1000.0
-	var query := PhysicsRayQueryParameters3D.create(from, to)
+	var from := camera.project_ray_origin(screen_position)
+	var to := from + camera.project_ray_normal(screen_position) * 1000.0
+	var query := PhysicsRayQueryParameters3D.create(from, to, 1)
 	query.collide_with_areas = true
 	var hit := get_world_3d().direct_space_state.intersect_ray(query)
 	_select(hit.get("collider") as GalleryWall if hit else null)
 
 func _floor_point(screen_position: Vector2) -> Variant:
-	var from := _camera.project_ray_origin(screen_position)
-	var direction := _camera.project_ray_normal(screen_position)
+	var from := camera.project_ray_origin(screen_position)
+	var direction := camera.project_ray_normal(screen_position)
 	if absf(direction.y) < 0.0001:
 		return null
 	var distance := -from.y / direction.y
@@ -124,6 +130,7 @@ func _select(wall: GalleryWall) -> void:
 func _rotate_selected(radians: float) -> void:
 	if AppMode.guard("girar pared") and _selected_wall != null:
 		_selected_wall.rotation.y += radians
+		_selected_wall.snap_rotation()
 
 func _reset_rotation() -> void:
 	if AppMode.guard("restablecer orientación") and _selected_wall != null:
@@ -136,3 +143,15 @@ func _apply_dimensions(_value: float) -> void:
 func _show_result(result: Dictionary) -> void:
 	if not result.get("ok", false):
 		push_error("Error de proyecto: " + str(result.get("mensaje", "desconocido")))
+
+func _build_canvas_controls() -> void:
+	_canvas_x_input = _add_dimension("Lienzo X", canvas.bloques_x, _apply_canvas_dimensions)
+	_canvas_z_input = _add_dimension("Lienzo Z", canvas.bloques_z, _apply_canvas_dimensions)
+
+func _build_artwork_button() -> void:
+	_add_button("Subir cuadro / imagen", artwork_manager.open_import)
+
+func _apply_canvas_dimensions(_value: float) -> void:
+	if not AppMode.can_edit():
+		return
+	canvas.set_dimensiones(int(_canvas_x_input.value), int(_canvas_z_input.value))

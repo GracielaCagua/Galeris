@@ -98,7 +98,14 @@ sistema de construcción (paredes, suelos, cámara, cuadrícula y UI), junto con
 los módulos de modos, control de edición y guardado de proyectos incorporados
 desde `feature/godot`.
 
-Abrir `godot/project.godot` desde el editor Godot 4.7 o posterior.
+Abrir `godot/project.godot` desde el editor Godot 4.7 o posterior. En Modo
+Crear se pueden añadir paredes con colisión, moverlas, girarlas en pasos de
+90°/180° y editar su ancho y alto. El lienzo se configura en bloques de un
+metro (por ejemplo, 3 x 5), y el piso, el cubo de prueba y las paredes tienen
+colisión física.
+
+El botón `Subir cuadro / imagen` permite importar cuadros en JPG, JPEG, PNG,
+WEBP, BMP o TGA y colocarlos sobre las paredes mediante el selector de archivos.
 
 ## Integración de datos
 
