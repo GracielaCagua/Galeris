@@ -233,7 +233,7 @@ function ConfirmDialog({ user, onClose, onConfirm }) {
   );
 }
 
-export default function AdminPanel({ session, onLogout, onOpenEditor, onUserUpdated }) {
+export default function AdminPanel({ session, onLogout, onOpenEditor, onOpenProject, onUserUpdated }) {
   const token = session.access_token;
   const currentUser = session.user;
   const [users, setUsers] = useState([]);
@@ -649,7 +649,7 @@ export default function AdminPanel({ session, onLogout, onOpenEditor, onUserUpda
                         <li key={project.id}>
                           <span className="project-dot" />
                           <div>
-                            <strong>{project.name}</strong>
+                            <button type="button" className="detail-project-button" onClick={() => onOpenProject(project)}><strong>{project.name}</strong></button>
                             <small>Actualizado el {formatDate(project.updated_at)}</small>
                           </div>
                         </li>

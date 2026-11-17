@@ -47,6 +47,9 @@ button { cursor: pointer; }
 .construction-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
 .construction-actions .button { padding: 7px 8px; font-size: 10px; }
 .section-heading { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+.project-heading-actions { display: flex; align-items: center; gap: 7px; }
+.detail-project-button { display: block; padding: 0; border: 0; background: none; color: var(--text); text-align: left; }
+.detail-project-button:hover { color: var(--accent); }
 .eyebrow { color: var(--muted); font-size: 9px; letter-spacing: .16em; font-weight: 800; margin: 0 0 6px; }
 h2 { font-size: 14px; margin: 0; letter-spacing: -.01em; }
 .count-badge { color: var(--accent); background: #1e2c17; padding: 3px 7px; border-radius: 5px; font-size: 10px; font-weight: 700; }

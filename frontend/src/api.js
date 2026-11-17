@@ -83,6 +83,21 @@ async function request(path, { method = "GET", body, token, headers } = {}) {
   return data;
 }
 
+async function uploadResource(token, file) {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("name", file.name.replace(/\.[^.]+$/, ""));
+  form.append("category", "modelos del proyecto");
+  const response = await fetch(`${API_URL}/api/resources`, {
+    method: "POST",
+    headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+    body: form
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) throw new ApiError(data?.detail || "No se pudo guardar el recurso.", response.status);
+  return data;
+}
+
 export const api = {
   baseUrl: API_URL,
   login: (username, password) => request("/api/auth/login", { method: "POST", body: { username, password } }),
@@ -94,6 +109,9 @@ export const api = {
   updateProject: (token, projectId, payload) =>
     request(`/api/projects/${projectId}`, { method: "PUT", token, body: payload }),
   getProject: (token, projectId) => request(`/api/projects/${projectId}`, { token }),
+  listResources: (token) => request("/api/resources", { token }),
+  uploadResource,
+  resourceFileUrl: (resource) => `${API_URL}${resource.file_url}`,
   listUsers: (token, { search = "", role = "", active = "", limit = 25, offset = 0 } = {}) => {
     const params = new URLSearchParams();
     if (search.trim()) params.set("search", search.trim());

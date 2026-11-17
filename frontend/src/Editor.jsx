@@ -71,7 +71,7 @@ function createWall(width = 4, height = 3) {
 const round = (value) => Number(value.toFixed(4));
 const bytes = (value) => `${(value / 1024 / 1024).toFixed(2)} MB`;
 
-export default function Editor({ session, onLogout, onOpenAdmin }) {
+export default function Editor({ session, onLogout, onOpenAdmin, initialProject = null }) {
   const viewportRef = useRef(null);
   const sceneRef = useRef(null);
   const transformRef = useRef(null);
@@ -298,7 +298,7 @@ export default function Editor({ session, onLogout, onOpenAdmin }) {
   const placeResource = (resource) => {
     if (mode === "view") return notify("Cambia a Crear o Editar para modificar la escena.");
     const object = resource.factory ? resource.factory() : createPrimitive(resource.type);
-    object.userData = { modelId: resource.id, modelName: resource.name, instanceId: `instance-${Date.now()}-${objectsRef.current.length + 1}` };
+    object.userData = { modelId: resource.id, resourceId: resource.id, modelName: resource.name, instanceId: `instance-${Date.now()}-${objectsRef.current.length + 1}` };
     object.position.set((objectsRef.current.length % 3 - 1) * 1.8, 0.7, Math.floor(objectsRef.current.length / 3) * 1.5);
     sceneRef.current.add(object);
     objectsRef.current.push(object);
@@ -311,16 +311,28 @@ export default function Editor({ session, onLogout, onOpenAdmin }) {
     const url = URL.createObjectURL(file);
     loaderRef.current.load(url, (gltf) => {
       const id = `model-${String(idRef.current++).padStart(3, "0")}`;
-      setResources((current) => [...current, {
+      const localResource = {
         id, name: file.name.replace(/\.(glb|gltf)$/i, ""), source: `${file.name} · ${bytes(file.size)}`,
         factory: () => {
           const clone = gltf.scene.clone(true);
           clone.traverse((child) => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } });
           return clone;
         }
-      }]);
+      };
+      setResources((current) => [...current, localResource]);
+      api.uploadResource(session.access_token, file)
+        .then((resource) => {
+          setResources((current) => current.map((entry) => entry.id === id
+            ? { ...entry, id: resource.id, source: `${file.name} · ${bytes(file.size)}`, fileUrl: api.resourceFileUrl(resource) }
+            : entry));
+          objectsRef.current.forEach((object) => {
+            if (object.userData.resourceId === id) object.userData.resourceId = resource.id;
+          });
+          gltf.scene.userData.resourceId = resource.id;
+          notify(`${file.name} guardado en tu biblioteca y disponible en proyectos`);
+        })
+        .catch((error) => notify(error.message || "El modelo quedó solo en esta sesión."));
       URL.revokeObjectURL(url);
-      notify(`${file.name} disponible en la biblioteca`);
     }, undefined, () => { URL.revokeObjectURL(url); notify("No se pudo cargar el modelo."); });
   };
 
@@ -373,6 +385,7 @@ export default function Editor({ session, onLogout, onOpenAdmin }) {
       instanceId: object.userData.instanceId,
       modelId: object.userData.modelId,
       modelName: object.userData.modelName,
+      resourceId: object.userData.resourceId || null,
       type: object.userData.wall ? "wall" : "object",
       width: object.userData.width, height: object.userData.height,
       hasCollision: Boolean(object.userData.hasCollision),
@@ -398,10 +411,62 @@ export default function Editor({ session, onLogout, onOpenAdmin }) {
     }
   };
 
+  const clearSceneSilently = () => {
+    objectsRef.current.forEach((object) => sceneRef.current.remove(object));
+    objectsRef.current = [];
+    deselect();
+  };
+
+  const loadProjectScene = async (project) => {
+    clearSceneSilently();
+    const data = project.data || {};
+    if (data.canvas) rebuildCanvas({
+      x: Math.max(1, Number(data.canvas.blocksX) || 3),
+      z: Math.max(1, Number(data.canvas.blocksZ) || 5)
+    });
+    const storedResources = await api.listResources(session.access_token);
+    const resourcesById = new Map([...resources, ...storedResources.map((resource) => ({
+      ...resource,
+      fileUrl: api.resourceFileUrl(resource),
+      source: `${resource.type} · ${resource.category}`
+    }))].map((resource) => [String(resource.id), resource]));
+    for (const saved of data.objects || []) {
+      let object;
+      if (saved.type === "wall") {
+        object = createWall(saved.width || 4, saved.height || 3);
+        object.userData = { ...saved, wall: true, modelName: saved.modelName || "Pared", hasCollision: true };
+      } else {
+        const resource = resourcesById.get(String(saved.resourceId || saved.modelId));
+        if (!resource) continue;
+        if (resource.factory) {
+          object = resource.factory();
+        } else if (resource.fileUrl) {
+          object = await new Promise((resolve, reject) => loaderRef.current.load(resource.fileUrl, (gltf) => resolve(gltf.scene), undefined, reject));
+        }
+        if (!object) continue;
+        object.userData = { ...saved, modelId: resource.id, modelName: resource.name };
+      }
+      object.position.set(saved.position?.x || 0, saved.position?.y || 0, saved.position?.z || 0);
+      object.rotation.set(saved.rotation?.x || 0, saved.rotation?.y || 0, saved.rotation?.z || 0);
+      object.scale.set(saved.scale?.x || 1, saved.scale?.y || 1, saved.scale?.z || 1);
+      sceneRef.current.add(object);
+      objectsRef.current.push(object);
+    }
+    sync();
+  };
+
+  useEffect(() => {
+    if (initialProject && sceneRef.current) {
+      setProjectId(initialProject.id);
+      setProjectName(initialProject.name);
+      loadProjectScene(initialProject).catch((error) => notify(error.message || "No se pudo cargar el proyecto."));
+    }
+  }, [initialProject]);
+
   useEffect(() => {
     let cancelled = false;
-    api.listProjects(session.access_token)
-      .then((items) => { if (!cancelled) setProjects(items); })
+    Promise.all([api.listProjects(session.access_token), api.listResources?.(session.access_token) || Promise.resolve([])])
+      .then(([items, storedResources]) => { if (!cancelled) { setProjects(items); setResources((current) => [...current, ...storedResources.map((resource) => ({ ...resource, fileUrl: api.resourceFileUrl(resource), source: `${resource.type} · ${resource.category}` }))]); } })
       .catch((error) => { if (!cancelled) notify(error.message || "No se pudieron cargar tus proyectos."); })
       .finally(() => { if (!cancelled) setProjectsLoading(false); });
     return () => { cancelled = true; };
@@ -412,10 +477,20 @@ export default function Editor({ session, onLogout, onOpenAdmin }) {
       const project = await api.getProject(session.access_token, id);
       setProjectId(project.id);
       setProjectName(project.name);
+      await loadProjectScene(project);
       notify(`Proyecto "${project.name}" seleccionado`);
     } catch (error) {
       notify(error.message || "No se pudo abrir el proyecto.");
     }
+  };
+
+  const createProject = () => {
+    clearSceneSilently();
+    setProjectId(null);
+    setProjectName("Nuevo proyecto");
+    setCanvasSize({ x: 3, z: 5 });
+    rebuildCanvas({ x: 3, z: 5 });
+    notify("Nuevo proyecto listo");
   };
 
   const clearScene = () => {
@@ -449,7 +524,7 @@ export default function Editor({ session, onLogout, onOpenAdmin }) {
       <main className="workspace">
         <aside className="sidebar">
           <section className="panel-section">
-            <div className="section-heading"><div><p className="eyebrow">MI CUENTA</p><h2>Mis proyectos</h2></div><span className="count-badge">{projects.length}</span></div>
+            <div className="section-heading"><div><p className="eyebrow">MI CUENTA</p><h2>Mis proyectos</h2></div><div className="project-heading-actions"><span className="count-badge">{projects.length}</span><button type="button" className="link-button" onClick={createProject}>＋ Nuevo</button></div></div>
             <label className="form-field project-name-field"><span>Proyecto actual</span><input value={projectName} onChange={(event) => setProjectName(event.target.value)} maxLength={255} /></label>
             <div className="project-list">
               {projectsLoading && <small>Cargando proyectos…</small>}

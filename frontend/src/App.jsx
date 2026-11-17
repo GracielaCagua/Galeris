@@ -9,6 +9,7 @@ export default function App() {
   const [view, setView] = useState(() => (loadSession()?.user?.role === "admin" ? "admin" : "editor"));
   const [checking, setChecking] = useState(() => Boolean(loadSession()));
   const [notice, setNotice] = useState("");
+  const [projectToOpen, setProjectToOpen] = useState(null);
 
   useEffect(() => {
     const stored = loadSession();
@@ -56,6 +57,7 @@ export default function App() {
     setSession(null);
     setView("editor");
     setNotice(message);
+    setProjectToOpen(null);
   }, []);
 
   const handleUserUpdated = useCallback((user) => {
@@ -83,7 +85,8 @@ export default function App() {
       <AdminPanel
         session={session}
         onLogout={handleLogout}
-        onOpenEditor={() => setView("editor")}
+        onOpenEditor={() => { setProjectToOpen(null); setView("editor"); }}
+        onOpenProject={(project) => { setProjectToOpen(project); setView("editor"); }}
         onUserUpdated={handleUserUpdated}
       />
     );
@@ -94,6 +97,7 @@ export default function App() {
       session={session}
       onLogout={handleLogout}
       onOpenAdmin={() => setView("admin")}
+      initialProject={projectToOpen}
     />
   );
 }
