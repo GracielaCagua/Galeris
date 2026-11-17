@@ -96,7 +96,7 @@ function createWall(width = 4, height = 3) {
   group.userData.height = height;
   group.userData.thickness = 0.2;
   group.userData.hasCollision = true;
-  group.userData.collision = { type: "box", width, height, thickness: 0.2 };
+  group.userData.collision = { enabled: true, type: "box", width, height, thickness: 0.2 };
   return group;
 }
 
@@ -371,6 +371,27 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
     object.position.add(correction);
   };
 
+  const resolveWallCollisions = (object) => {
+    if (!object || object.userData.wall) return;
+    object.updateMatrixWorld(true);
+    const objectBounds = new THREE.Box3().setFromObject(object);
+    const walls = objectsRef.current.filter((entry) => entry.userData.wall && entry.userData.hasCollision);
+    for (const wall of walls) {
+      wall.updateMatrixWorld(true);
+      const wallBounds = new THREE.Box3().setFromObject(wall);
+      if (!objectBounds.intersectsBox(wallBounds) || objectBounds.max.y < wallBounds.min.y || objectBounds.min.y > wallBounds.max.y) continue;
+      const pushX = Math.min(objectBounds.max.x - wallBounds.min.x, wallBounds.max.x - objectBounds.min.x);
+      const pushZ = Math.min(objectBounds.max.z - wallBounds.min.z, wallBounds.max.z - objectBounds.min.z);
+      if (pushX < pushZ) {
+        object.position.x += objectBounds.getCenter(new THREE.Vector3()).x < wallBounds.getCenter(new THREE.Vector3()).x ? -pushX : pushX;
+      } else {
+        object.position.z += objectBounds.getCenter(new THREE.Vector3()).z < wallBounds.getCenter(new THREE.Vector3()).z ? -pushZ : pushZ;
+      }
+      object.updateMatrixWorld(true);
+      objectBounds.setFromObject(object);
+    }
+  };
+
   const keepObjectOnFloor = (object) => {
     if (!object || object.userData.canvasFloor) return;
     if (object.userData.wall) {
@@ -386,6 +407,7 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
     const bounds = new THREE.Box3().setFromObject(object);
     if (bounds.min.y < 0) object.position.y += -bounds.min.y;
     constrainObjectToCanvas(object);
+    resolveWallCollisions(object);
   };
 
   const removeBoundaryWalls = () => {
@@ -446,7 +468,8 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
       modelId: "wall",
       modelName: "Pared",
       instanceId: `wall-${Date.now()}`,
-      collision: { type: "box", width: 4, height: 3, thickness: 0.2 }
+      hasCollision: true,
+      collision: { enabled: true, type: "box", width: 4, height: 3, thickness: 0.2 }
     };
     wall.position.set(0, 0, 0);
     snapWall(wall);
