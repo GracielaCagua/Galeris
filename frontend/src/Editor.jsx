@@ -31,6 +31,27 @@ function createPrimitive(type) {
 
 const snapToBlock = (value) => Math.round(value);
 
+function createCanvasGrid(width, depth) {
+  const group = new THREE.Group();
+  const material = new THREE.LineBasicMaterial({ color: 0x35404f });
+  const points = [];
+  const halfWidth = width / 2;
+  const halfDepth = depth / 2;
+
+  for (let x = -halfWidth; x <= halfWidth; x += 1) {
+    points.push(new THREE.Vector3(x, 0.006, -halfDepth));
+    points.push(new THREE.Vector3(x, 0.006, halfDepth));
+  }
+  for (let z = -halfDepth; z <= halfDepth; z += 1) {
+    points.push(new THREE.Vector3(-halfWidth, 0.006, z));
+    points.push(new THREE.Vector3(halfWidth, 0.006, z));
+  }
+
+  const geometry = new THREE.BufferGeometry().setFromPoints(points);
+  group.add(new THREE.LineSegments(geometry, material));
+  return group;
+}
+
 function createWall(width = 4, height = 3) {
   const group = new THREE.Group();
   const material = new THREE.MeshStandardMaterial({ color: 0xe7e9ed, roughness: 0.8 });
@@ -143,7 +164,7 @@ export default function Editor({ session, onLogout, onOpenAdmin }) {
     light.position.set(4, 9, 5);
     light.castShadow = true;
     scene.add(light);
-    const grid = new THREE.GridHelper(20, 20, 0x35404f, 0x202833);
+    const grid = createCanvasGrid(3, 5);
     scene.add(grid);
     scene.userData.canvasGrid = grid;
     const floor = new THREE.Mesh(
@@ -204,13 +225,14 @@ export default function Editor({ session, onLogout, onOpenAdmin }) {
     if (!floor || !grid) return;
     floor.geometry.dispose();
     floor.geometry = new THREE.BoxGeometry(nextSize.x, 0.1, nextSize.z);
-    grid.geometry.dispose();
-    grid.geometry = new THREE.GridHelper(
-      Math.max(nextSize.x, nextSize.z),
-      Math.max(nextSize.x, nextSize.z),
-      0x35404f,
-      0x202833
-    ).geometry;
+    const nextGrid = createCanvasGrid(nextSize.x, nextSize.z);
+    sceneRef.current.remove(grid);
+    grid.traverse((child) => {
+      if (child.geometry) child.geometry.dispose();
+      if (child.material) child.material.dispose();
+    });
+    sceneRef.current.add(nextGrid);
+    sceneRef.current.userData.canvasGrid = nextGrid;
     setCanvasSize(nextSize);
   };
 
