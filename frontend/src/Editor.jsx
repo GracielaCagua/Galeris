@@ -30,6 +30,7 @@ function createPrimitive(type) {
 }
 
 const snapToBlock = (value) => Math.round(value);
+const snapToTenth = (value) => Math.round(value * 10) / 10;
 
 function createCanvasGrid(width, depth) {
   const group = new THREE.Group();
@@ -248,15 +249,22 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
     if (!wall?.userData.wall) return;
     wall.scale.set(1, 1, 1);
     wall.position.y = 0;
-    wall.position.x = snapToBlock(wall.position.x);
-    wall.position.z = snapToBlock(wall.position.z);
     wall.rotation.y = THREE.MathUtils.degToRad(
       Math.round(THREE.MathUtils.radToDeg(wall.rotation.y) / 90) * 90
     );
-    wall.userData.width = Math.max(1, snapToBlock(wall.userData.width));
-    wall.userData.height = Math.max(1, snapToBlock(wall.userData.height));
+    wall.userData.width = Math.max(0.1, snapToTenth(wall.userData.width));
+    wall.userData.height = Math.max(0.1, snapToTenth(wall.userData.height));
     wall.userData.collision.width = wall.userData.width;
     wall.userData.collision.height = wall.userData.height;
+    const horizontal = Math.abs(Math.cos(wall.rotation.y)) > 0.5;
+    const length = wall.userData.width;
+    const halfCanvas = horizontal ? canvasSize.x / 2 : canvasSize.z / 2;
+    const center = horizontal ? wall.position.x : wall.position.z;
+    const start = center - length / 2;
+    const snappedStart = -halfCanvas + Math.round(start + halfCanvas);
+    const snappedCenter = snappedStart + length / 2;
+    if (horizontal) wall.position.x = snappedCenter;
+    else wall.position.z = snappedCenter;
   };
 
   const keepObjectOnFloor = (object) => {
@@ -281,6 +289,7 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
       collision: { type: "box", width: 4, height: 3, thickness: 0.2 }
     };
     wall.position.set(0, 0, 0);
+    snapWall(wall);
     sceneRef.current.add(wall);
     objectsRef.current.push(wall);
     selectObject(wall);
@@ -300,9 +309,10 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
   const updateWallDimensions = (field, value) => {
     const wall = selectedRef.current;
     if (!wall?.userData.wall || mode === "view") return;
-    const next = Math.max(1, snapToBlock(Number(value) || 1));
+    const next = Math.max(0.1, snapToTenth(Number(value) || 0.1));
     wall.userData[field] = next;
     wall.userData.collision[field] = next;
+    snapWall(wall);
     const mesh = wall.children[0];
     mesh.geometry.dispose();
     mesh.geometry = new THREE.BoxGeometry(wall.userData.width, wall.userData.height, 0.2);
@@ -595,7 +605,7 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
         <aside className="inspector">
           <div className="inspector-header"><p className="eyebrow">INSPECTOR</p><h2>{selectedObject?.userData.modelName || "Sin selección"}</h2><p>{selectedObject ? (mode === "view" ? "La escena está bloqueada en Modo visualizar." : "Usa los controles sobre el objeto para transformarlo.") : "Selecciona un objeto en Modo crear o Editar."}</p></div>
           <div className={`transform-fields ${!selectedObject || mode === "view" ? "is-disabled" : ""}`}>
-            {selectedObject?.userData.wall && <div className="field-group"><div className="field-heading"><span>Dimensiones de pared</span><span className="axis-label">METROS</span></div><div className="vector-fields"><label><i className="x">ANCHO</i><input disabled={mode === "view"} type="number" min="0.1" step="0.1" value={selectedObject.userData.width} onChange={(event) => updateWallDimensions("width", event.target.value)} /></label><label><i className="y">ALTO</i><input disabled={mode === "view"} type="number" min="0.1" step="0.1" value={selectedObject.userData.height} onChange={(event) => updateWallDimensions("height", event.target.value)} /></label></div><small className="panel-help">Colisión tipo caja activa.</small></div>}
+            {selectedObject?.userData.wall && <div className="field-group"><div className="field-heading"><span>Dimensiones de pared</span><span className="axis-label">METROS</span></div><div className="vector-fields"><label><i className="x">ANCHO</i><input disabled={mode === "view"} type="number" min="0.1" step="0.1" value={selectedObject.userData.width} onChange={(event) => updateWallDimensions("width", event.target.value)} /></label><label><i className="y">ALTO</i><input disabled={mode === "view"} type="number" min="0.1" step="0.1" value={selectedObject.userData.height} onChange={(event) => updateWallDimensions("height", event.target.value)} /></label></div><small className="panel-help">Colisión tipo caja activa. Base fija en el suelo.</small></div>}
             {transformFields.map((type) => <div className="field-group" key={type}><div className="field-heading"><span>{type === "position" ? "Posición" : type === "rotation" ? "Rotación" : "Escala"}</span><span className="axis-label">{type === "rotation" ? "GRADOS" : "XYZ"}</span></div><div className="vector-fields">{axes.map((axis) => <label key={axis}><i className={axis}>{axis.toUpperCase()}</i><input disabled={!selectedObject || mode === "view"} type="number" step={type === "rotation" ? "1" : "0.1"} value={transformValues ? Number(transformValues[type][axis]).toFixed(2) : ""} onChange={(event) => setTransformValue(type, axis, event.target.value)} /></label>)}</div></div>)}
           </div>
           <div className="inspector-footer"><div className="model-meta"><span>IDENTIFICADOR</span><code>{selectedObject?.userData.modelId || "—"}</code></div><button className="button danger full" disabled={!selectedObject || mode === "view"} onClick={removeSelected}>Eliminar objeto</button><button className="link-button scale-link" disabled={!selectedObject || mode === "view"} onClick={() => setUniformScale(!uniformScale)}>{uniformScale ? "Escala vinculada" : "Escala libre"}</button></div>
