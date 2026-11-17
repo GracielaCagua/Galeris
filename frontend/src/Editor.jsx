@@ -45,6 +45,19 @@ function createBoundaryWall(name, width, height, position, rotation = 0) {
   return wall;
 }
 
+function updateBoundaryWallOpacity(wall, camera) {
+  const wallPosition = new THREE.Vector3();
+  wall.getWorldPosition(wallPosition);
+  const distance = Math.hypot(camera.position.x - wallPosition.x, camera.position.z - wallPosition.z);
+  const opacity = THREE.MathUtils.smoothstep(distance, 2, 6);
+  wall.traverse((child) => {
+    if (!child.isMesh || !child.material) return;
+    child.material.transparent = true;
+    child.material.opacity = Math.max(0.12, opacity);
+    child.material.depthWrite = opacity > 0.8;
+  });
+}
+
 const snapToBlock = (value) => Math.round(value);
 const snapToTenth = (value) => Math.round(value * 10) / 10;
 
@@ -143,8 +156,12 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
     if (mode === "view") return;
     selectedRef.current = object;
     setSelectedId(object.userData.instanceId);
-    transformRef.current.setMode(gizmoMode);
-    transformRef.current.attach(object);
+    if (object.userData.boundaryWall) {
+      transformRef.current.detach();
+    } else {
+      transformRef.current.setMode(gizmoMode);
+      transformRef.current.attach(object);
+    }
     sync();
   }, [gizmoMode, mode, sync]);
 
@@ -258,7 +275,14 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
     window.addEventListener("resize", onResize);
     resize();
     let frame;
-    const render = () => { frame = requestAnimationFrame(render); orbit.update(); renderer.render(scene, camera); };
+    const render = () => {
+      frame = requestAnimationFrame(render);
+      orbit.update();
+      objectsRef.current
+        .filter((object) => object.userData.boundaryWall)
+        .forEach((wall) => updateBoundaryWallOpacity(wall, camera));
+      renderer.render(scene, camera);
+    };
     render();
     return () => {
       cancelAnimationFrame(frame);
@@ -443,7 +467,11 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
     const transform = transformRef.current;
     if (!transform) return;
     transform.setMode(gizmoMode);
-    if (selectedRef.current && mode !== "view") transform.attach(selectedRef.current);
+    if (selectedRef.current?.userData.boundaryWall || mode === "view") {
+      transform.detach();
+    } else if (selectedRef.current) {
+      transform.attach(selectedRef.current);
+    }
   }, [gizmoMode, mode]);
 
   const placeResource = (resource) => {
