@@ -16,28 +16,6 @@ const modeLabels = {
   view: ["Modo visualizar · escena bloqueada", "Solo lectura"]
 };
 
-const applyWallScale = (wall, drag) => {
-  if (!wall?.userData.wall || !drag) return;
-  const widthFactor = Math.max(0.1, Math.abs(wall.scale.x / drag.scale.x));
-  const heightFactor = Math.max(0.1, Math.abs(wall.scale.y / drag.scale.y));
-  const nextWidth = Math.max(0.1, snapToTenth(drag.width * widthFactor));
-  const nextHeight = Math.max(0.1, snapToTenth(drag.height * heightFactor));
-  const direction = new THREE.Vector3(1, 0, 0).applyQuaternion(wall.quaternion).normalize();
-  const fixedStart = drag.position.clone().sub(direction.clone().multiplyScalar(drag.width / 2));
-  wall.position.copy(fixedStart.add(direction.clone().multiplyScalar(nextWidth / 2)));
-  wall.position.y = 0;
-  if (drag.finalize) {
-    wall.userData.width = nextWidth;
-    wall.userData.height = nextHeight;
-    wall.userData.collision.width = nextWidth;
-    wall.userData.collision.height = nextHeight;
-    const mesh = wall.children[0];
-    mesh.geometry.dispose();
-    mesh.geometry = new THREE.BoxGeometry(nextWidth, nextHeight, 0.2);
-    mesh.position.y = nextHeight / 2;
-  }
-};
-
 function createPrimitive(type) {
   const group = new THREE.Group();
   const material = new THREE.MeshStandardMaterial({ color: type === "cube" ? 0xb9f36d : 0x72a8ff, roughness: 0.65 });
@@ -49,6 +27,22 @@ function createPrimitive(type) {
   mesh.receiveShadow = true;
   group.add(mesh);
   return group;
+}
+
+function createBoundaryWall(name, width, height, position, rotation = 0) {
+  const wall = createWall(width, height);
+  wall.name = name;
+  wall.position.copy(position);
+  wall.rotation.y = rotation;
+  wall.userData = {
+    ...wall.userData,
+    modelId: "boundary-wall",
+    modelName: name,
+    instanceId: `boundary-${name}`,
+    boundaryWall: true,
+    collision: { type: "box", width, height, thickness: 0.2 }
+  };
+  return wall;
 }
 
 const snapToBlock = (value) => Math.round(value);
@@ -233,6 +227,7 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
     scene.add(floor);
     scene.userData.canvasFloor = floor;
     sceneRef.current = scene;
+    createBoundaryWalls({ x: 3, z: 5 });
     transformRef.current = transform;
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
@@ -292,6 +287,7 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
     sceneRef.current.add(nextGrid);
     sceneRef.current.userData.canvasGrid = nextGrid;
     setCanvasSize(nextSize);
+    createBoundaryWalls(nextSize);
   };
 
   const snapWall = (wall) => {
@@ -320,15 +316,83 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
     else wall.position.z = snappedCenter;
   };
 
+  const constrainBoundaryWall = (wall) => {
+    const halfX = canvasSize.x / 2;
+    const halfZ = canvasSize.z / 2;
+    const horizontal = Math.abs(Math.cos(wall.rotation.y)) > 0.5;
+    wall.rotation.y = horizontal ? 0 : Math.PI / 2;
+    wall.position.set(
+      horizontal ? 0 : (wall.name.includes("oeste") ? -halfX : halfX),
+      0,
+      horizontal ? (wall.name.includes("norte") ? -halfZ : halfZ) : 0
+    );
+    wall.scale.x = 1;
+    wall.scale.z = 1;
+  };
+
   const keepObjectOnFloor = (object) => {
     if (!object || object.userData.canvasFloor) return;
     if (object.userData.wall) {
+      if (object.userData.boundaryWall) {
+        constrainBoundaryWall(object);
+        return;
+      }
       snapWall(object);
       return;
     }
     object.updateMatrixWorld(true);
     const bounds = new THREE.Box3().setFromObject(object);
     if (bounds.min.y < 0) object.position.y += -bounds.min.y;
+  };
+
+  const removeBoundaryWalls = () => {
+    const boundaries = objectsRef.current.filter((object) => object.userData.boundaryWall);
+    boundaries.forEach((wall) => sceneRef.current?.remove(wall));
+    objectsRef.current = objectsRef.current.filter((object) => !object.userData.boundaryWall);
+  };
+
+  const createBoundaryWalls = (size = canvasSize) => {
+    removeBoundaryWalls();
+    const height = 3;
+    const halfX = size.x / 2;
+    const halfZ = size.z / 2;
+    const walls = [
+      createBoundaryWall("Pared norte", size.x, height, new THREE.Vector3(0, 0, -halfZ), 0),
+      createBoundaryWall("Pared sur", size.x, height, new THREE.Vector3(0, 0, halfZ), 0),
+      createBoundaryWall("Pared oeste", size.z, height, new THREE.Vector3(-halfX, 0, 0), Math.PI / 2),
+      createBoundaryWall("Pared este", size.z, height, new THREE.Vector3(halfX, 0, 0), Math.PI / 2)
+    ];
+    walls.forEach((wall) => {
+      sceneRef.current.add(wall);
+      objectsRef.current.push(wall);
+    });
+  };
+
+  const applyWallScale = (wall, drag) => {
+    if (!wall?.userData.wall || !drag) return;
+    const widthFactor = Math.max(0.1, Math.abs(wall.scale.x / drag.scale.x));
+    const heightFactor = Math.max(0.1, Math.abs(wall.scale.y / drag.scale.y));
+    const nextWidth = wall.userData.boundaryWall
+      ? drag.width
+      : Math.max(0.1, snapToTenth(drag.width * widthFactor));
+    const nextHeight = Math.max(0.1, snapToTenth(drag.height * heightFactor));
+    const direction = new THREE.Vector3(1, 0, 0).applyQuaternion(wall.quaternion).normalize();
+    if (!wall.userData.boundaryWall) {
+      const fixedStart = drag.position.clone().sub(direction.clone().multiplyScalar(drag.width / 2));
+      wall.position.copy(fixedStart.add(direction.clone().multiplyScalar(nextWidth / 2)));
+    }
+    wall.position.y = 0;
+    if (drag.finalize) {
+      wall.userData.width = nextWidth;
+      wall.userData.height = nextHeight;
+      wall.userData.collision.width = nextWidth;
+      wall.userData.collision.height = nextHeight;
+      const mesh = wall.children[0];
+      mesh.geometry.dispose();
+      mesh.geometry = new THREE.BoxGeometry(nextWidth, nextHeight, 0.2);
+      mesh.position.y = nextHeight / 2;
+    }
+    if (wall.userData.boundaryWall) constrainBoundaryWall(wall);
   };
 
   const addWall = () => {
@@ -351,6 +415,7 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
 
   const rotateSelected = (degrees) => {
     if (!selectedRef.current || mode === "view") return;
+    if (selectedRef.current.userData.boundaryWall) return notify("Las paredes del perímetro no se pueden rotar.");
     selectedRef.current.rotation.y += THREE.MathUtils.degToRad(degrees);
     selectedRef.current.rotation.y = THREE.MathUtils.degToRad(
       Math.round(THREE.MathUtils.radToDeg(selectedRef.current.rotation.y) / 90) * 90
@@ -362,6 +427,7 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
   const updateWallDimensions = (field, value) => {
     const wall = selectedRef.current;
     if (!wall?.userData.wall || mode === "view") return;
+    if (wall.userData.boundaryWall && field !== "height") return;
     const next = Math.max(0.1, snapToTenth(Number(value) || 0.1));
     wall.userData[field] = next;
     wall.userData.collision[field] = next;
@@ -424,6 +490,7 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
   const removeSelected = () => {
     const object = selectedRef.current;
     if (!object || mode === "view") return;
+    if (object.userData.boundaryWall) return notify("Las paredes del perímetro no se pueden eliminar.");
     sceneRef.current.remove(object);
     objectsRef.current = objectsRef.current.filter((entry) => entry !== object);
     deselect();
@@ -433,6 +500,7 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
   const setTransformValue = (type, axis, value) => {
     const object = selectedRef.current;
     if (!object || mode === "view" || !Number.isFinite(Number(value))) return;
+    if (object.userData.boundaryWall && (type === "rotation" || (type === "position" && axis !== "y") || (type === "scale" && axis !== "y"))) return;
     const numeric = Number(value);
     if (object.userData.wall && axis === "y" && type === "position") return;
     if (type === "rotation") object.rotation[axis] = THREE.MathUtils.degToRad(numeric);
@@ -446,7 +514,7 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
     const data = {
       version: 1, format: "model-forge-scene",
       canvas: { blocksX: canvasSize.x, blocksZ: canvasSize.z, blockSize: 1 },
-      objects: objectsRef.current.map((object) => ({
+      objects: objectsRef.current.filter((object) => !object.userData.boundaryWall).map((object) => ({
         instanceId: object.userData.instanceId, modelId: object.userData.modelId,
         type: object.userData.wall ? "wall" : "object",
         width: object.userData.width, height: object.userData.height,
@@ -468,7 +536,7 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
     version: 1,
     format: "model-forge-scene",
     canvas: { blocksX: canvasSize.x, blocksZ: canvasSize.z, blockSize: 1 },
-    objects: objectsRef.current.map((object) => ({
+    objects: objectsRef.current.filter((object) => !object.userData.boundaryWall).map((object) => ({
       instanceId: object.userData.instanceId,
       modelId: object.userData.modelId,
       modelName: object.userData.modelName,
@@ -499,8 +567,10 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
   };
 
   const clearSceneSilently = () => {
-    objectsRef.current.forEach((object) => sceneRef.current.remove(object));
-    objectsRef.current = [];
+    objectsRef.current
+      .filter((object) => !object.userData.boundaryWall)
+      .forEach((object) => sceneRef.current.remove(object));
+    objectsRef.current = objectsRef.current.filter((object) => object.userData.boundaryWall);
     deselect();
   };
 
@@ -519,6 +589,7 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
     }))].map((resource) => [String(resource.id), resource]));
     for (const saved of data.objects || []) {
       let object;
+      if (saved.boundaryWall) continue;
       if (saved.type === "wall") {
         object = createWall(saved.width || 4, saved.height || 3);
         object.userData = { ...saved, wall: true, modelName: saved.modelName || "Pared", hasCollision: true };
@@ -582,8 +653,10 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
   };
 
   const clearScene = () => {
-    objectsRef.current.forEach((object) => sceneRef.current.remove(object));
-    objectsRef.current = [];
+    objectsRef.current
+      .filter((object) => !object.userData.boundaryWall)
+      .forEach((object) => sceneRef.current.remove(object));
+    objectsRef.current = objectsRef.current.filter((object) => object.userData.boundaryWall);
     deselect();
     notify("Escena limpiada");
   };
@@ -658,7 +731,7 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
         <aside className="inspector">
           <div className="inspector-header"><p className="eyebrow">INSPECTOR</p><h2>{selectedObject?.userData.modelName || "Sin selección"}</h2><p>{selectedObject ? (mode === "view" ? "La escena está bloqueada en Modo visualizar." : "Usa los controles sobre el objeto para transformarlo.") : "Selecciona un objeto en Modo crear o Editar."}</p></div>
           <div className={`transform-fields ${!selectedObject || mode === "view" ? "is-disabled" : ""}`}>
-            {selectedObject?.userData.wall && <div className="field-group"><div className="field-heading"><span>Dimensiones de pared</span><span className="axis-label">METROS</span></div><div className="vector-fields"><label><i className="x">ANCHO</i><input disabled={mode === "view"} type="number" min="0.1" step="0.1" value={selectedObject.userData.width} onChange={(event) => updateWallDimensions("width", event.target.value)} /></label><label><i className="y">ALTO</i><input disabled={mode === "view"} type="number" min="0.1" step="0.1" value={selectedObject.userData.height} onChange={(event) => updateWallDimensions("height", event.target.value)} /></label></div><small className="panel-help">Colisión tipo caja activa. Base fija en el suelo.</small></div>}
+            {selectedObject?.userData.wall && <div className="field-group"><div className="field-heading"><span>Dimensiones de pared</span><span className="axis-label">METROS</span></div><div className="vector-fields"><label><i className="x">ANCHO</i><input disabled={mode === "view" || selectedObject.userData.boundaryWall} type="number" min="0.1" step="0.1" value={selectedObject.userData.width} onChange={(event) => updateWallDimensions("width", event.target.value)} /></label><label><i className="y">ALTO</i><input disabled={mode === "view"} type="number" min="0.1" step="0.1" value={selectedObject.userData.height} onChange={(event) => updateWallDimensions("height", event.target.value)} /></label></div><small className="panel-help">{selectedObject.userData.boundaryWall ? "Pared perimetral con colisión. Solo se puede cambiar el alto." : "Colisión tipo caja activa. Base fija en el suelo."}</small></div>}
             {transformFields.map((type) => <div className="field-group" key={type}><div className="field-heading"><span>{type === "position" ? "Posición" : type === "rotation" ? "Rotación" : "Escala"}</span><span className="axis-label">{type === "rotation" ? "GRADOS" : "XYZ"}</span></div><div className="vector-fields">{axes.map((axis) => <label key={axis}><i className={axis}>{axis.toUpperCase()}</i><input disabled={!selectedObject || mode === "view"} type="number" step={type === "rotation" ? "1" : "0.1"} value={transformValues ? Number(transformValues[type][axis]).toFixed(2) : ""} onChange={(event) => setTransformValue(type, axis, event.target.value)} /></label>)}</div></div>)}
           </div>
           <div className="inspector-footer"><div className="model-meta"><span>IDENTIFICADOR</span><code>{selectedObject?.userData.modelId || "—"}</code></div><button className="button danger full" disabled={!selectedObject || mode === "view"} onClick={removeSelected}>Eliminar objeto</button><button className="link-button scale-link" disabled={!selectedObject || mode === "view"} onClick={() => setUniformScale(!uniformScale)}>{uniformScale ? "Escala vinculada" : "Escala libre"}</button></div>
