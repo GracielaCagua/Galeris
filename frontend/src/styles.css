@@ -77,10 +77,13 @@ h2 { font-size: 14px; margin: 0; letter-spacing: -.01em; }
 .project-name-field input { width: 100%; }
 .project-list { display: grid; gap: 7px; }
 .project-list > small { color: var(--muted); font-size: 10px; }
-.project-item { display: flex; justify-content: space-between; gap: 8px; width: 100%; padding: 9px; border: 1px solid var(--border); border-radius: 7px; background: var(--panel-2); color: var(--text); text-align: left; }
+.project-item { display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px; border: 1px solid var(--border); border-radius: 7px; background: var(--panel-2); color: var(--text); text-align: left; }
 .project-item:hover, .project-item.selected { border-color: var(--accent-dark); background: #1c2718; }
+.project-open { display: flex; justify-content: space-between; gap: 8px; flex: 1; min-width: 0; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
 .project-item strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
 .project-item small { color: var(--muted); font-size: 9px; white-space: nowrap; }
+.project-delete { flex: 0 0 auto; padding: 0 3px; border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 18px; line-height: 1; }
+.project-delete:hover { color: var(--danger); }
 .tips { color: var(--muted); font-size: 10px; line-height: 1.6; }
 .tips p { margin: 8px 0; }
 kbd { background: var(--panel-2); border: 1px solid var(--border); color: var(--text); padding: 2px 5px; border-radius: 3px; font-size: 9px; }

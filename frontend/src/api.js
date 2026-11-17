@@ -109,6 +109,8 @@ export const api = {
   updateProject: (token, projectId, payload) =>
     request(`/api/projects/${projectId}`, { method: "PUT", token, body: payload }),
   getProject: (token, projectId) => request(`/api/projects/${projectId}`, { token }),
+  deleteProject: (token, projectId) =>
+    request(`/api/projects/${projectId}`, { method: "DELETE", token }),
   listResources: (token) => request("/api/resources", { token }),
   deleteResource: (token, resourceId) =>
     request(`/api/resources/${resourceId}`, { method: "DELETE", token }),

@@ -735,6 +735,18 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
     }
   };
 
+  const deleteProject = async (project) => {
+    if (!window.confirm(`¿Eliminar el proyecto "${project.name}"? Esta acción no se puede deshacer.`)) return;
+    try {
+      await api.deleteProject(session.access_token, project.id);
+      setProjects((current) => current.filter((entry) => entry.id !== project.id));
+      if (project.id === projectId) createProject();
+      notify(`Proyecto "${project.name}" eliminado`);
+    } catch (error) {
+      notify(error.message || "No se pudo eliminar el proyecto.");
+    }
+  };
+
   const createProject = () => {
     clearSceneSilently();
     setProjectId(null);
@@ -783,9 +795,12 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
               {projectsLoading && <small>Cargando proyectos…</small>}
               {!projectsLoading && !projects.length && <small>Aún no tienes proyectos guardados.</small>}
               {projects.map((project) => (
-                <button type="button" className={`project-item ${project.id === projectId ? "selected" : ""}`} key={project.id} onClick={() => openProject(project.id)}>
-                  <strong>{project.name}</strong><small>{new Date(project.updated_at).toLocaleDateString("es-ES")}</small>
-                </button>
+                <div className={`project-item ${project.id === projectId ? "selected" : ""}`} key={project.id}>
+                  <button type="button" className="project-open" onClick={() => openProject(project.id)}>
+                    <strong>{project.name}</strong><small>{new Date(project.updated_at).toLocaleDateString("es-ES")}</small>
+                  </button>
+                  <button type="button" className="project-delete" aria-label={`Eliminar ${project.name}`} title="Eliminar proyecto" onClick={() => deleteProject(project)}>×</button>
+                </div>
               ))}
             </div>
           </section>
