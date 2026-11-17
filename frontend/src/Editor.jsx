@@ -16,6 +16,22 @@ const modeLabels = {
   view: ["Modo visualizar · escena bloqueada", "Solo lectura"]
 };
 
+const applyWallScale = (wall) => {
+  if (!wall?.userData.wall) return;
+  const nextWidth = Math.max(0.1, snapToTenth(wall.userData.width * wall.scale.x));
+  const nextHeight = Math.max(0.1, snapToTenth(wall.userData.height * wall.scale.y));
+  wall.userData.width = nextWidth;
+  wall.userData.height = nextHeight;
+  wall.userData.collision.width = nextWidth;
+  wall.userData.collision.height = nextHeight;
+  const mesh = wall.children[0];
+  mesh.geometry.dispose();
+  mesh.geometry = new THREE.BoxGeometry(nextWidth, nextHeight, 0.2);
+  mesh.position.y = nextHeight / 2;
+  wall.scale.set(1, 1, 1);
+  snapWall(wall);
+};
+
 function createPrimitive(type) {
   const group = new THREE.Group();
   const material = new THREE.MeshStandardMaterial({ color: type === "cube" ? 0xb9f36d : 0x72a8ff, roughness: 0.65 });
@@ -90,6 +106,7 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
   const [transformValues, setTransformValues] = useState(null);
   const [mode, setMode] = useState("create");
   const [gizmoMode, setGizmoMode] = useState("rotate");
+  const gizmoModeRef = useRef("rotate");
   const [uniformScale, setUniformScale] = useState(true);
   const [toast, setToast] = useState("");
   const [dropActive, setDropActive] = useState(false);
@@ -104,6 +121,8 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
     window.clearTimeout(notify.timer);
     notify.timer = window.setTimeout(() => setToast(""), 2400);
   }, []);
+
+  gizmoModeRef.current = gizmoMode;
 
   const sync = useCallback(() => {
     const object = selectedRef.current;
@@ -157,7 +176,11 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
     transform.setSize(1.3);
     transform.addEventListener("dragging-changed", (event) => { orbit.enabled = !event.value; });
     transform.addEventListener("objectChange", () => {
-      keepObjectOnFloor(selectedRef.current);
+      if (gizmoModeRef.current === "scale" && selectedRef.current?.userData.wall) {
+        applyWallScale(selectedRef.current);
+      } else {
+        keepObjectOnFloor(selectedRef.current);
+      }
       sync();
     });
     scene.add(transform.getHelper());
@@ -248,7 +271,7 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
   const snapWall = (wall) => {
     if (!wall?.userData.wall) return;
     wall.scale.set(1, 1, 1);
-    wall.position.y = 0;
+    wall.position.y = Math.max(0, wall.position.y);
     wall.rotation.y = THREE.MathUtils.degToRad(
       Math.round(THREE.MathUtils.radToDeg(wall.rotation.y) / 90) * 90
     );
@@ -261,7 +284,11 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
     const halfCanvas = horizontal ? canvasSize.x / 2 : canvasSize.z / 2;
     const center = horizontal ? wall.position.x : wall.position.z;
     const start = center - length / 2;
-    const snappedStart = -halfCanvas + Math.round(start + halfCanvas);
+    const maxStart = halfCanvas * 2 - length;
+    const snappedStart = Math.min(
+      maxStart - halfCanvas,
+      Math.max(-halfCanvas, -halfCanvas + Math.round(start + halfCanvas))
+    );
     const snappedCenter = snappedStart + length / 2;
     if (horizontal) wall.position.x = snappedCenter;
     else wall.position.z = snappedCenter;
