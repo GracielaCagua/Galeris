@@ -16,20 +16,26 @@ const modeLabels = {
   view: ["Modo visualizar · escena bloqueada", "Solo lectura"]
 };
 
-const applyWallScale = (wall) => {
-  if (!wall?.userData.wall) return;
-  const nextWidth = Math.max(0.1, snapToTenth(wall.userData.width * wall.scale.x));
-  const nextHeight = Math.max(0.1, snapToTenth(wall.userData.height * wall.scale.y));
-  wall.userData.width = nextWidth;
-  wall.userData.height = nextHeight;
-  wall.userData.collision.width = nextWidth;
-  wall.userData.collision.height = nextHeight;
-  const mesh = wall.children[0];
-  mesh.geometry.dispose();
-  mesh.geometry = new THREE.BoxGeometry(nextWidth, nextHeight, 0.2);
-  mesh.position.y = nextHeight / 2;
-  wall.scale.set(1, 1, 1);
-  snapWall(wall);
+const applyWallScale = (wall, drag) => {
+  if (!wall?.userData.wall || !drag) return;
+  const widthFactor = Math.max(0.1, Math.abs(wall.scale.x / drag.scale.x));
+  const heightFactor = Math.max(0.1, Math.abs(wall.scale.y / drag.scale.y));
+  const nextWidth = Math.max(0.1, snapToTenth(drag.width * widthFactor));
+  const nextHeight = Math.max(0.1, snapToTenth(drag.height * heightFactor));
+  const direction = new THREE.Vector3(1, 0, 0).applyQuaternion(wall.quaternion).normalize();
+  const fixedStart = drag.position.clone().sub(direction.clone().multiplyScalar(drag.width / 2));
+  wall.position.copy(fixedStart.add(direction.clone().multiplyScalar(nextWidth / 2)));
+  wall.position.y = 0;
+  if (drag.finalize) {
+    wall.userData.width = nextWidth;
+    wall.userData.height = nextHeight;
+    wall.userData.collision.width = nextWidth;
+    wall.userData.collision.height = nextHeight;
+    const mesh = wall.children[0];
+    mesh.geometry.dispose();
+    mesh.geometry = new THREE.BoxGeometry(nextWidth, nextHeight, 0.2);
+    mesh.position.y = nextHeight / 2;
+  }
 };
 
 function createPrimitive(type) {
@@ -107,6 +113,7 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
   const [mode, setMode] = useState("create");
   const [gizmoMode, setGizmoMode] = useState("rotate");
   const gizmoModeRef = useRef("rotate");
+  const wallScaleDragRef = useRef(null);
   const [uniformScale, setUniformScale] = useState(true);
   const [toast, setToast] = useState("");
   const [dropActive, setDropActive] = useState(false);
@@ -174,10 +181,29 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
     const transform = new TransformControls(camera, renderer.domElement);
     transform.setSpace("world");
     transform.setSize(1.3);
-    transform.addEventListener("dragging-changed", (event) => { orbit.enabled = !event.value; });
+    transform.addEventListener("dragging-changed", (event) => {
+      orbit.enabled = !event.value;
+      const wall = selectedRef.current;
+      if (event.value && gizmoModeRef.current === "scale" && wall?.userData.wall) {
+        wallScaleDragRef.current = {
+          width: wall.userData.width,
+          height: wall.userData.height,
+          position: wall.position.clone(),
+          scale: wall.scale.clone()
+        };
+      } else if (!event.value && wall?.userData.wall) {
+        if (wallScaleDragRef.current) {
+          wallScaleDragRef.current.finalize = true;
+          applyWallScale(wall, wallScaleDragRef.current);
+        }
+        wall.scale.set(1, 1, 1);
+        wallScaleDragRef.current = null;
+        snapWall(wall);
+      }
+    });
     transform.addEventListener("objectChange", () => {
       if (gizmoModeRef.current === "scale" && selectedRef.current?.userData.wall) {
-        applyWallScale(selectedRef.current);
+        applyWallScale(selectedRef.current, wallScaleDragRef.current);
       } else {
         keepObjectOnFloor(selectedRef.current);
       }
