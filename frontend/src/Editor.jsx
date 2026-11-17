@@ -65,6 +65,7 @@ function createWall(width = 4, height = 3) {
   group.userData.height = height;
   group.userData.thickness = 0.2;
   group.userData.hasCollision = true;
+  group.userData.collision = { type: "box", width, height, thickness: 0.2 };
   return group;
 }
 
@@ -155,7 +156,7 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
     transform.setSize(1.3);
     transform.addEventListener("dragging-changed", (event) => { orbit.enabled = !event.value; });
     transform.addEventListener("objectChange", () => {
-      snapWall(selectedRef.current);
+      keepObjectOnFloor(selectedRef.current);
       sync();
     });
     scene.add(transform.getHelper());
@@ -172,7 +173,12 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
       new THREE.MeshStandardMaterial({ color: 0x68717d, roughness: 0.9 })
     );
     floor.position.y = -0.05;
-    floor.userData = { modelName: "Suelo del lienzo", hasCollision: true, canvasFloor: true };
+    floor.userData = {
+      modelName: "Suelo del lienzo",
+      hasCollision: true,
+      canvasFloor: true,
+      collision: { type: "box", width: 3, height: 0.1, depth: 5, top: 0 }
+    };
     floor.receiveShadow = true;
     scene.add(floor);
     scene.userData.canvasFloor = floor;
@@ -225,6 +231,8 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
     if (!floor || !grid) return;
     floor.geometry.dispose();
     floor.geometry = new THREE.BoxGeometry(nextSize.x, 0.1, nextSize.z);
+    floor.userData.collision.width = nextSize.x;
+    floor.userData.collision.depth = nextSize.z;
     const nextGrid = createCanvasGrid(nextSize.x, nextSize.z);
     sceneRef.current.remove(grid);
     grid.traverse((child) => {
@@ -239,6 +247,7 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
   const snapWall = (wall) => {
     if (!wall?.userData.wall) return;
     wall.scale.set(1, 1, 1);
+    wall.position.y = 0;
     wall.position.x = snapToBlock(wall.position.x);
     wall.position.z = snapToBlock(wall.position.z);
     wall.rotation.y = THREE.MathUtils.degToRad(
@@ -246,6 +255,19 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
     );
     wall.userData.width = Math.max(1, snapToBlock(wall.userData.width));
     wall.userData.height = Math.max(1, snapToBlock(wall.userData.height));
+    wall.userData.collision.width = wall.userData.width;
+    wall.userData.collision.height = wall.userData.height;
+  };
+
+  const keepObjectOnFloor = (object) => {
+    if (!object || object.userData.canvasFloor) return;
+    if (object.userData.wall) {
+      snapWall(object);
+      return;
+    }
+    object.updateMatrixWorld(true);
+    const bounds = new THREE.Box3().setFromObject(object);
+    if (bounds.min.y < 0) object.position.y += -bounds.min.y;
   };
 
   const addWall = () => {
@@ -349,9 +371,11 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
     const object = selectedRef.current;
     if (!object || mode === "view" || !Number.isFinite(Number(value))) return;
     const numeric = Number(value);
+    if (object.userData.wall && axis === "y" && type === "position") return;
     if (type === "rotation") object.rotation[axis] = THREE.MathUtils.degToRad(numeric);
     else if (type === "scale" && uniformScale) object.scale.set(numeric, numeric, numeric);
     else object[type][axis] = numeric;
+    keepObjectOnFloor(object);
     sync();
   };
 
@@ -449,6 +473,7 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
       object.position.set(saved.position?.x || 0, saved.position?.y || 0, saved.position?.z || 0);
       object.rotation.set(saved.rotation?.x || 0, saved.rotation?.y || 0, saved.rotation?.z || 0);
       object.scale.set(saved.scale?.x || 1, saved.scale?.y || 1, saved.scale?.z || 1);
+      keepObjectOnFloor(object);
       sceneRef.current.add(object);
       objectsRef.current.push(object);
     }
