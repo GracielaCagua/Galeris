@@ -122,6 +122,8 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
   const [gizmoMode, setGizmoMode] = useState("rotate");
   const gizmoModeRef = useRef("rotate");
   const wallScaleDragRef = useRef(null);
+  const pendingUploadsRef = useRef(new Map());
+  const uploadErrorsRef = useRef(new Set());
   const [uniformScale, setUniformScale] = useState(true);
   const [toast, setToast] = useState("");
   const [dropActive, setDropActive] = useState(false);
@@ -552,18 +554,27 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
         }
       };
       setResources((current) => [...current, localResource]);
-      api.uploadResource(session.access_token, file)
+      const uploadPromise = api.uploadResource(session.access_token, file)
         .then((resource) => {
           setResources((current) => current.map((entry) => entry.id === id
-            ? { ...entry, id: resource.id, source: `${file.name} · ${bytes(file.size)}`, fileUrl: api.resourceFileUrl(resource) }
+            ? { ...entry, id: resource.id, type: resource.type, source: `${file.name} · ${bytes(file.size)}`, fileUrl: api.resourceFileUrl(resource) }
             : entry));
           objectsRef.current.forEach((object) => {
-            if (object.userData.resourceId === id) object.userData.resourceId = resource.id;
+            if (object.userData.resourceId === id) {
+              object.userData.resourceId = resource.id;
+              object.userData.modelId = resource.id;
+              object.userData.resourceType = resource.type;
+            }
           });
           gltf.scene.userData.resourceId = resource.id;
           notify(`${file.name} guardado en tu biblioteca y disponible en proyectos`);
         })
-        .catch((error) => notify(error.message || "El modelo quedó solo en esta sesión."));
+        .catch((error) => {
+          uploadErrorsRef.current.add(id);
+          notify(error.message || "No se pudo guardar el modelo importado.");
+        })
+        .finally(() => pendingUploadsRef.current.delete(id));
+      pendingUploadsRef.current.set(id, uploadPromise);
       URL.revokeObjectURL(url);
     }, undefined, () => { URL.revokeObjectURL(url); notify("No se pudo cargar el modelo."); });
   };
@@ -654,6 +665,13 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
     const name = projectName.trim();
     if (!name) return notify("Escribe un nombre para tu proyecto.");
     try {
+      if (pendingUploadsRef.current.size) {
+        notify("Esperando a que terminen de subir los modelos...");
+        await Promise.all(pendingUploadsRef.current.values());
+      }
+      if (uploadErrorsRef.current.size) {
+        throw new Error("No se puede guardar el proyecto porque un modelo importado no se pudo subir.");
+      }
       const payload = { name, description: "Galería creada desde el editor", data: getSceneData() };
       const saved = projectId
         ? await api.updateProject(session.access_token, projectId, payload)
