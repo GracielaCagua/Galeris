@@ -42,6 +42,33 @@ def test_admin_login_and_me(client):
     assert client.get("/api/auth/me").status_code == 401
 
 
+def test_public_registration_creates_only_user_and_logs_in(client):
+    response = client.post(
+        "/api/auth/register",
+        json={
+            "username": "nuevo.usuario",
+            "email": "Nuevo@Example.com",
+            "full_name": "Nuevo Usuario",
+            "password": "clave-segura-1",
+            "role": "admin",
+        },
+    )
+    assert response.status_code == 201, response.text
+    result = response.json()
+    assert result["user"]["role"] == "user"
+    assert result["user"]["email"] == "nuevo@example.com"
+    assert client.get("/api/admin/users", headers=auth_headers(result["access_token"])).status_code == 403
+
+    assert client.post(
+        "/api/auth/register",
+        json={
+            "username": "nuevo.usuario",
+            "email": "otro@example.com",
+            "password": "clave-segura-1",
+        },
+    ).status_code == 409
+
+
 def test_admin_user_management(client):
     token = login(client)["access_token"]
     headers = auth_headers(token)

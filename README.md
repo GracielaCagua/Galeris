@@ -59,6 +59,7 @@ Endpoints principales:
 | --- | --- | --- |
 | `GET` | `/api/health` | Estado de la API |
 | `POST` | `/api/auth/login` | Iniciar sesión y obtener el token |
+| `POST` | `/api/auth/register` | Crear una cuenta nueva con rol de usuario |
 | `GET` | `/api/auth/me` | Usuario de la sesión actual |
 | `POST` | `/api/auth/logout` | Cerrar sesión |
 | `GET` | `/api/admin/stats` | Resumen de usuarios, proyectos y recursos (admin) |

@@ -14,6 +14,13 @@ class LoginRequest(BaseModel):
     password: str = Field(min_length=1, max_length=128)
 
 
+class RegisterRequest(BaseModel):
+    username: str = Field(min_length=3, max_length=32, pattern=USERNAME_PATTERN)
+    email: str = Field(min_length=5, max_length=255, pattern=EMAIL_PATTERN)
+    full_name: str = Field(default="", max_length=255)
+    password: str = Field(min_length=8, max_length=128)
+
+
 class ResourceRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

@@ -39,8 +39,10 @@ export default function App() {
     };
   }, []);
 
-  const handleLogin = useCallback(async (username, password) => {
-    const result = await api.login(username, password);
+  const handleLogin = useCallback(async (usernameOrPayload, password) => {
+    const result = typeof usernameOrPayload === "string"
+      ? await api.login(usernameOrPayload, password)
+      : await api.register(usernameOrPayload);
     saveSession(result);
     setSession(result);
     setNotice("");

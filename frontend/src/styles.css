@@ -61,6 +61,14 @@ h2 { font-size: 14px; margin: 0; letter-spacing: -.01em; }
 .scene-item.selected { border-color: var(--accent-dark); background: #1c2718; }
 .scene-item .resource-icon { background: #202731; color: #9babbd; }
 .empty-state { color: var(--muted); font-size: 11px; line-height: 1.5; border: 1px dashed var(--border); border-radius: 7px; padding: 14px; }
+.project-name-field { margin: 0 0 10px; }
+.project-name-field input { width: 100%; }
+.project-list { display: grid; gap: 7px; }
+.project-list > small { color: var(--muted); font-size: 10px; }
+.project-item { display: flex; justify-content: space-between; gap: 8px; width: 100%; padding: 9px; border: 1px solid var(--border); border-radius: 7px; background: var(--panel-2); color: var(--text); text-align: left; }
+.project-item:hover, .project-item.selected { border-color: var(--accent-dark); background: #1c2718; }
+.project-item strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+.project-item small { color: var(--muted); font-size: 9px; white-space: nowrap; }
 .tips { color: var(--muted); font-size: 10px; line-height: 1.6; }
 .tips p { margin: 8px 0; }
 kbd { background: var(--panel-2); border: 1px solid var(--border); color: var(--text); padding: 2px 5px; border-radius: 3px; font-size: 9px; }
@@ -147,6 +155,9 @@ kbd { background: var(--panel-2); border: 1px solid var(--border); color: var(--
 .form-notice { background: rgba(185, 243, 109, .08); border: 1px solid #3d532a; color: #cdeba5; padding: 9px 10px; border-radius: 6px; font-size: 10.5px; margin: 4px 0 10px; }
 .form-hint { color: var(--muted); font-size: 10px; line-height: 1.5; margin: 0; }
 .login-card .button.full { margin-top: 4px; padding: 11px 12px; font-size: 12px; }
+.login-switch { width: 100%; margin-top: 15px; border: 0; background: transparent; color: var(--accent); font-size: 10px; }
+.login-switch:hover { text-decoration: underline; }
+.form-field small { color: var(--muted); font-size: 9px; font-weight: 400; letter-spacing: 0; text-transform: none; }
 .demo-credentials { margin-top: 22px; border-top: 1px solid var(--border); padding-top: 15px; color: var(--muted); font-size: 10px; line-height: 1.7; }
 .demo-credentials p { margin: 0; }
 .demo-credentials code { color: var(--accent); background: #1e2c17; padding: 1px 5px; border-radius: 4px; font-size: 10px; }

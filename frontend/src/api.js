@@ -29,13 +29,7 @@ export function clearStoredSession() {
 }
 
 export function initials(name = "") {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase() || "?";
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "?";
 }
 
 export function roleLabel(role) {
@@ -44,11 +38,7 @@ export function roleLabel(role) {
 
 const dateFormatter = new Intl.DateTimeFormat("es-ES", { day: "2-digit", month: "short", year: "numeric" });
 const dateTimeFormatter = new Intl.DateTimeFormat("es-ES", {
-  day: "2-digit",
-  month: "short",
-  year: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
+  day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit"
 });
 
 export function formatDate(value) {
@@ -69,7 +59,7 @@ async function request(path, { method = "GET", body, token, headers } = {}) {
     options.headers["Content-Type"] = "application/json";
     options.body = JSON.stringify(body);
   }
-  if (token) options.headers.Authorization = `Bearer ${token}`;
+  if (token) options.headers.Authorization = "Bearer " + token;
 
   let response;
   try {
@@ -77,26 +67,17 @@ async function request(path, { method = "GET", body, token, headers } = {}) {
   } catch {
     throw new ApiError("No se pudo conectar con la API. Comprueba que el backend esté en marcha.", 0);
   }
-
   if (response.status === 204) return null;
-
   const text = await response.text();
   let data = null;
   if (text) {
-    try {
-      data = JSON.parse(text);
-    } catch {
-      data = text;
-    }
+    try { data = JSON.parse(text); } catch { data = text; }
   }
-
   if (!response.ok) {
     const detail = data && typeof data === "object" ? data.detail : null;
     const message = Array.isArray(detail)
       ? detail.map((entry) => entry.msg).join(" · ")
-      : typeof detail === "string"
-        ? detail
-        : "No se pudo completar la operación.";
+      : typeof detail === "string" ? detail : "No se pudo completar la operación.";
     throw new ApiError(message, response.status);
   }
   return data;
@@ -104,10 +85,15 @@ async function request(path, { method = "GET", body, token, headers } = {}) {
 
 export const api = {
   baseUrl: API_URL,
-  login: (username, password) =>
-    request("/api/auth/login", { method: "POST", body: { username, password } }),
+  login: (username, password) => request("/api/auth/login", { method: "POST", body: { username, password } }),
+  register: (payload) => request("/api/auth/register", { method: "POST", body: payload }),
   me: (token) => request("/api/auth/me", { token }),
   logout: (token) => request("/api/auth/logout", { method: "POST", token }),
+  listProjects: (token) => request("/api/projects", { token }),
+  createProject: (token, payload) => request("/api/projects", { method: "POST", token, body: payload }),
+  updateProject: (token, projectId, payload) =>
+    request(`/api/projects/${projectId}`, { method: "PUT", token, body: payload }),
+  getProject: (token, projectId) => request(`/api/projects/${projectId}`, { token }),
   listUsers: (token, { search = "", role = "", active = "", limit = 25, offset = 0 } = {}) => {
     const params = new URLSearchParams();
     if (search.trim()) params.set("search", search.trim());
@@ -119,10 +105,7 @@ export const api = {
   },
   userDetail: (token, userId) => request(`/api/admin/users/${userId}`, { token }),
   stats: (token) => request("/api/admin/stats", { token }),
-  createUser: (token, payload) =>
-    request("/api/admin/users", { method: "POST", token, body: payload }),
-  updateUser: (token, userId, payload) =>
-    request(`/api/admin/users/${userId}`, { method: "PATCH", token, body: payload }),
-  deleteUser: (token, userId) =>
-    request(`/api/admin/users/${userId}`, { method: "DELETE", token }),
+  createUser: (token, payload) => request("/api/admin/users", { method: "POST", token, body: payload }),
+  updateUser: (token, userId, payload) => request(`/api/admin/users/${userId}`, { method: "PATCH", token, body: payload }),
+  deleteUser: (token, userId) => request(`/api/admin/users/${userId}`, { method: "DELETE", token })
 };

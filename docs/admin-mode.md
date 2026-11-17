@@ -8,6 +8,10 @@ de datos a mano y añade control de roles y estados.
 
 1. Inicia el backend (`uvicorn app.main:app --reload`).
 2. Inicia el frontend (`npm run dev`).
+
+Las personas nuevas pueden registrarse desde la pantalla de inicio de sesión.
+El registro público siempre crea cuentas con rol `user`; las cuentas
+administradoras solo pueden crearse o modificarse desde el panel administrador.
 3. Entra en `http://localhost:5173` con la cuenta administradora:
 
    | Usuario | Contraseña | Rol |

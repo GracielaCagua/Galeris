@@ -1,22 +1,39 @@
 import { useState } from "react";
 
 export default function LoginScreen({ onLogin, notice }) {
+  const [registering, setRegistering] = useState(false);
   const [identifier, setIdentifier] = useState("");
+  const [email, setEmail] = useState("");
+  const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const submit = async (event) => {
     event.preventDefault();
-    if (!identifier.trim() || !password) {
-      setError("Escribe tu usuario y tu contraseña.");
+    if (!identifier.trim() || !password || (registering && (!email.trim() || !passwordConfirmation))) {
+      setError(registering ? "Completa todos los campos obligatorios." : "Escribe tu usuario y tu contraseña.");
+      return;
+    }
+    if (registering && password !== passwordConfirmation) {
+      setError("Las contraseñas no coinciden.");
       return;
     }
     setSubmitting(true);
     setError("");
     try {
-      await onLogin(identifier.trim(), password);
+      if (registering) {
+        await onLogin({
+          username: identifier.trim(),
+          email: email.trim(),
+          full_name: fullName.trim(),
+          password
+        });
+      } else {
+        await onLogin(identifier.trim(), password);
+      }
     } catch (requestError) {
       setError(requestError.message || "No se pudo iniciar sesión.");
     } finally {
@@ -53,9 +70,9 @@ export default function LoginScreen({ onLogin, notice }) {
       <section className="login-panel">
         <div className="login-card">
           <header>
-            <p className="eyebrow">BIENVENIDO DE NUEVO</p>
-            <h2>Iniciar sesión</h2>
-            <p>Accede con tu cuenta para continuar.</p>
+            <p className="eyebrow">{registering ? "NUEVA CUENTA" : "BIENVENIDO DE NUEVO"}</p>
+            <h2>{registering ? "Crear cuenta" : "Iniciar sesión"}</h2>
+            <p>{registering ? "Regístrate como usuario para crear tus galerías." : "Accede con tu cuenta para continuar."}</p>
           </header>
 
           <form onSubmit={submit} noValidate>
@@ -64,16 +81,29 @@ export default function LoginScreen({ onLogin, notice }) {
               <input
                 type="text"
                 name="username"
-                autoComplete="username"
-                placeholder="admin"
+                autoComplete={registering ? "username" : "username"}
+                placeholder={registering ? "mi-usuario" : "admin"}
                 value={identifier}
                 onChange={(event) => setIdentifier(event.target.value)}
                 autoFocus
               />
             </label>
 
+            {registering && (
+              <>
+                <label className="form-field">
+                  <span>Correo electrónico</span>
+                  <input type="email" name="email" autoComplete="email" placeholder="tu@correo.com" value={email} onChange={(event) => setEmail(event.target.value)} />
+                </label>
+                <label className="form-field">
+                  <span>Nombre completo <small>(opcional)</small></span>
+                  <input type="text" name="full_name" autoComplete="name" placeholder="Tu nombre" value={fullName} onChange={(event) => setFullName(event.target.value)} />
+                </label>
+              </>
+            )}
+
             <label className="form-field">
-              <span>Contraseña</span>
+              <span>{registering ? "Contraseña (mínimo 8 caracteres)" : "Contraseña"}</span>
               <div className="password-field">
                 <input
                   type={showPassword ? "text" : "password"}
@@ -94,15 +124,26 @@ export default function LoginScreen({ onLogin, notice }) {
               </div>
             </label>
 
+            {registering && (
+              <label className="form-field">
+                <span>Confirmar contraseña</span>
+                <input type="password" name="password_confirmation" autoComplete="new-password" placeholder="••••••••" value={passwordConfirmation} onChange={(event) => setPasswordConfirmation(event.target.value)} />
+              </label>
+            )}
+
             {error && <p className="form-error" role="alert">{error}</p>}
             {notice && !error && <p className="form-notice">{notice}</p>}
 
             <button className="button primary full" type="submit" disabled={submitting}>
-              {submitting ? "Comprobando…" : "Entrar"}
+              {submitting ? (registering ? "Creando cuenta…" : "Comprobando…") : (registering ? "Crear cuenta" : "Entrar")}
             </button>
           </form>
 
-          {import.meta.env.DEV && (
+          <button type="button" className="login-switch" onClick={() => { setRegistering((value) => !value); setError(""); }}>
+            {registering ? "¿Ya tienes una cuenta? Inicia sesión" : "¿No tienes cuenta? Crea una como usuario"}
+          </button>
+
+          {!registering && import.meta.env.DEV && (
             <div className="demo-credentials">
               <p className="eyebrow">ACCESO DE DEMOSTRACIÓN</p>
               <p><code>admin</code> / <code>admin123</code> · administrador</p>

@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { TransformControls } from "three/addons/controls/TransformControls.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import { initials, roleLabel } from "./api.js";
+import { api, initials, roleLabel } from "./api.js";
 
 const initialResources = [
   { id: "model-001", name: "Cubo de prueba", source: "Primitiva · GLB compatible", type: "cube" },
@@ -52,6 +52,10 @@ export default function Editor({ session, onLogout, onOpenAdmin }) {
   const [uniformScale, setUniformScale] = useState(true);
   const [toast, setToast] = useState("");
   const [dropActive, setDropActive] = useState(false);
+  const [projects, setProjects] = useState([]);
+  const [projectId, setProjectId] = useState(null);
+  const [projectName, setProjectName] = useState("Mi galería");
+  const [projectsLoading, setProjectsLoading] = useState(true);
 
   const notify = useCallback((message) => {
     setToast(message);
@@ -234,6 +238,55 @@ export default function Editor({ session, onLogout, onOpenAdmin }) {
     notify("Escena exportada para Persona 1");
   };
 
+  const getSceneData = () => ({
+    version: 1,
+    format: "model-forge-scene",
+    objects: objectsRef.current.map((object) => ({
+      instanceId: object.userData.instanceId,
+      modelId: object.userData.modelId,
+      modelName: object.userData.modelName,
+      position: { x: round(object.position.x), y: round(object.position.y), z: round(object.position.z) },
+      rotation: { x: round(object.rotation.x), y: round(object.rotation.y), z: round(object.rotation.z) },
+      scale: { x: round(object.scale.x), y: round(object.scale.y), z: round(object.scale.z) }
+    }))
+  });
+
+  const saveProject = async () => {
+    const name = projectName.trim();
+    if (!name) return notify("Escribe un nombre para tu proyecto.");
+    try {
+      const payload = { name, description: "Galería creada desde el editor", data: getSceneData() };
+      const saved = projectId
+        ? await api.updateProject(session.access_token, projectId, payload)
+        : await api.createProject(session.access_token, payload);
+      setProjectId(saved.id);
+      setProjects((current) => [saved, ...current.filter((project) => project.id !== saved.id)]);
+      notify("Proyecto guardado en tu cuenta");
+    } catch (error) {
+      notify(error.message || "No se pudo guardar el proyecto.");
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    api.listProjects(session.access_token)
+      .then((items) => { if (!cancelled) setProjects(items); })
+      .catch((error) => { if (!cancelled) notify(error.message || "No se pudieron cargar tus proyectos."); })
+      .finally(() => { if (!cancelled) setProjectsLoading(false); });
+    return () => { cancelled = true; };
+  }, [session.access_token, notify]);
+
+  const openProject = async (id) => {
+    try {
+      const project = await api.getProject(session.access_token, id);
+      setProjectId(project.id);
+      setProjectName(project.name);
+      notify(`Proyecto "${project.name}" seleccionado`);
+    } catch (error) {
+      notify(error.message || "No se pudo abrir el proyecto.");
+    }
+  };
+
   const clearScene = () => {
     objectsRef.current.forEach((object) => sceneRef.current.remove(object));
     objectsRef.current = [];
@@ -252,7 +305,8 @@ export default function Editor({ session, onLogout, onOpenAdmin }) {
         <div className="mode-switch">{Object.keys(modeLabels).map((key) => <button key={key} className={`mode-button ${mode === key ? "active" : ""}`} onClick={() => { setMode(key); if (key === "view") deselect(); }}>{key === "create" ? "✦ Crear" : key === "edit" ? "✎ Editar" : "◉ Visualizar"}</button>)}</div>
         <div className="top-actions">
           {session?.user?.role === "admin" && <button className="button secondary" onClick={onOpenAdmin}>Usuarios</button>}
-          <button className="button secondary" onClick={saveScene}>Guardar JSON</button>
+          <button className="button secondary" onClick={saveProject}>Guardar proyecto</button>
+          <button className="button secondary" onClick={saveScene}>Exportar JSON</button>
           <button className="button danger" onClick={clearScene}>Limpiar</button>
           <div className="editor-user" title={`${session?.user?.full_name || session?.user?.username || "Invitado"} · ${roleLabel(session?.user?.role)}`}>
             <span className="editor-avatar">{initials(session?.user?.full_name || session?.user?.username || "Invitado")}</span>
@@ -263,6 +317,19 @@ export default function Editor({ session, onLogout, onOpenAdmin }) {
       </header>
       <main className="workspace">
         <aside className="sidebar">
+          <section className="panel-section">
+            <div className="section-heading"><div><p className="eyebrow">MI CUENTA</p><h2>Mis proyectos</h2></div><span className="count-badge">{projects.length}</span></div>
+            <label className="form-field project-name-field"><span>Proyecto actual</span><input value={projectName} onChange={(event) => setProjectName(event.target.value)} maxLength={255} /></label>
+            <div className="project-list">
+              {projectsLoading && <small>Cargando proyectos…</small>}
+              {!projectsLoading && !projects.length && <small>Aún no tienes proyectos guardados.</small>}
+              {projects.map((project) => (
+                <button type="button" className={`project-item ${project.id === projectId ? "selected" : ""}`} key={project.id} onClick={() => openProject(project.id)}>
+                  <strong>{project.name}</strong><small>{new Date(project.updated_at).toLocaleDateString("es-ES")}</small>
+                </button>
+              ))}
+            </div>
+          </section>
           <section className="panel-section">
             <div className="section-heading"><div><p className="eyebrow">RECURSOS</p><h2>Biblioteca 3D</h2></div><span className="count-badge">{resources.length}</span></div>
             <label className="upload-zone" htmlFor="model-input"><span className="upload-icon">＋</span><strong>Importar modelo</strong><small>GLB / glTF · arrastra o selecciona</small></label>
