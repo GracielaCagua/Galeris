@@ -40,6 +40,12 @@ button { cursor: pointer; }
 .sidebar { border-right: 1px solid var(--border); }
 .inspector { border-left: 1px solid var(--border); display: flex; flex-direction: column; }
 .panel-section { padding: 22px 18px; border-bottom: 1px solid var(--border); }
+.panel-help { display: block; color: var(--muted); font-size: 10px; line-height: 1.5; margin-top: 9px; }
+.canvas-size-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.canvas-size-fields label { color: var(--muted); font-size: 9px; text-transform: uppercase; letter-spacing: .08em; }
+.canvas-size-fields input { display: block; width: 100%; margin-top: 5px; }
+.construction-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.construction-actions .button { padding: 7px 8px; font-size: 10px; }
 .section-heading { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
 .eyebrow { color: var(--muted); font-size: 9px; letter-spacing: .16em; font-weight: 800; margin: 0 0 6px; }
 h2 { font-size: 14px; margin: 0; letter-spacing: -.01em; }

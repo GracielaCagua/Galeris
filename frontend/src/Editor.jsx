@@ -29,6 +29,22 @@ function createPrimitive(type) {
   return group;
 }
 
+function createWall(width = 4, height = 3) {
+  const group = new THREE.Group();
+  const material = new THREE.MeshStandardMaterial({ color: 0xe7e9ed, roughness: 0.8 });
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, height, 0.2), material);
+  mesh.position.y = height / 2;
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  group.add(mesh);
+  group.userData.wall = true;
+  group.userData.width = width;
+  group.userData.height = height;
+  group.userData.thickness = 0.2;
+  group.userData.hasCollision = true;
+  return group;
+}
+
 const round = (value) => Number(value.toFixed(4));
 const bytes = (value) => `${(value / 1024 / 1024).toFixed(2)} MB`;
 
@@ -56,6 +72,7 @@ export default function Editor({ session, onLogout, onOpenAdmin }) {
   const [projectId, setProjectId] = useState(null);
   const [projectName, setProjectName] = useState("Mi galería");
   const [projectsLoading, setProjectsLoading] = useState(true);
+  const [canvasSize, setCanvasSize] = useState({ x: 3, z: 5 });
 
   const notify = useCallback((message) => {
     setToast(message);
@@ -122,6 +139,15 @@ export default function Editor({ session, onLogout, onOpenAdmin }) {
     light.castShadow = true;
     scene.add(light);
     scene.add(new THREE.GridHelper(20, 20, 0x35404f, 0x202833));
+    const floor = new THREE.Mesh(
+      new THREE.BoxGeometry(3, 0.1, 5),
+      new THREE.MeshStandardMaterial({ color: 0x68717d, roughness: 0.9 })
+    );
+    floor.position.y = -0.05;
+    floor.userData = { modelName: "Suelo del lienzo", hasCollision: true, canvasFloor: true };
+    floor.receiveShadow = true;
+    scene.add(floor);
+    scene.userData.canvasFloor = floor;
     sceneRef.current = scene;
     transformRef.current = transform;
     const raycaster = new THREE.Raycaster();
@@ -164,6 +190,53 @@ export default function Editor({ session, onLogout, onOpenAdmin }) {
       viewport.removeChild(renderer.domElement);
     };
   }, []);
+
+  const rebuildCanvas = (nextSize) => {
+    const floor = sceneRef.current?.userData.canvasFloor;
+    if (!floor) return;
+    floor.geometry.dispose();
+    floor.geometry = new THREE.BoxGeometry(nextSize.x, 0.1, nextSize.z);
+    setCanvasSize(nextSize);
+  };
+
+  const addWall = () => {
+    if (mode === "view") return notify("Cambia a Crear o Editar para crear paredes.");
+    const wall = createWall();
+    wall.userData = {
+      ...wall.userData,
+      modelId: "wall",
+      modelName: "Pared",
+      instanceId: `wall-${Date.now()}`,
+      collision: { type: "box", width: 4, height: 3, thickness: 0.2 }
+    };
+    wall.position.set(0, 0, 0);
+    sceneRef.current.add(wall);
+    objectsRef.current.push(wall);
+    selectObject(wall);
+    notify("Pared creada con colisión");
+  };
+
+  const rotateSelected = (degrees) => {
+    if (!selectedRef.current || mode === "view") return;
+    selectedRef.current.rotation.y += THREE.MathUtils.degToRad(degrees);
+    selectedRef.current.rotation.y = THREE.MathUtils.degToRad(
+      Math.round(THREE.MathUtils.radToDeg(selectedRef.current.rotation.y) / 90) * 90
+    );
+    sync();
+  };
+
+  const updateWallDimensions = (field, value) => {
+    const wall = selectedRef.current;
+    if (!wall?.userData.wall || mode === "view") return;
+    const next = Math.max(0.1, Number(value) || 0.1);
+    wall.userData[field] = next;
+    wall.userData.collision[field] = next;
+    const mesh = wall.children[0];
+    mesh.geometry.dispose();
+    mesh.geometry = new THREE.BoxGeometry(wall.userData.width, wall.userData.height, 0.2);
+    mesh.position.y = wall.userData.height / 2;
+    sync();
+  };
 
   useEffect(() => {
     const transform = transformRef.current;
@@ -223,8 +296,12 @@ export default function Editor({ session, onLogout, onOpenAdmin }) {
   const saveScene = () => {
     const data = {
       version: 1, format: "model-forge-scene",
+      canvas: { blocksX: canvasSize.x, blocksZ: canvasSize.z, blockSize: 1 },
       objects: objectsRef.current.map((object) => ({
         instanceId: object.userData.instanceId, modelId: object.userData.modelId,
+        type: object.userData.wall ? "wall" : "object",
+        width: object.userData.width, height: object.userData.height,
+        hasCollision: Boolean(object.userData.hasCollision),
         position: { x: round(object.position.x), y: round(object.position.y), z: round(object.position.z) },
         rotation: { x: round(object.rotation.x), y: round(object.rotation.y), z: round(object.rotation.z) },
         scale: { x: round(object.scale.x), y: round(object.scale.y), z: round(object.scale.z) }
@@ -241,10 +318,14 @@ export default function Editor({ session, onLogout, onOpenAdmin }) {
   const getSceneData = () => ({
     version: 1,
     format: "model-forge-scene",
+    canvas: { blocksX: canvasSize.x, blocksZ: canvasSize.z, blockSize: 1 },
     objects: objectsRef.current.map((object) => ({
       instanceId: object.userData.instanceId,
       modelId: object.userData.modelId,
       modelName: object.userData.modelName,
+      type: object.userData.wall ? "wall" : "object",
+      width: object.userData.width, height: object.userData.height,
+      hasCollision: Boolean(object.userData.hasCollision),
       position: { x: round(object.position.x), y: round(object.position.y), z: round(object.position.z) },
       rotation: { x: round(object.rotation.x), y: round(object.rotation.y), z: round(object.rotation.z) },
       scale: { x: round(object.scale.x), y: round(object.scale.y), z: round(object.scale.z) }
@@ -331,6 +412,19 @@ export default function Editor({ session, onLogout, onOpenAdmin }) {
             </div>
           </section>
           <section className="panel-section">
+            <div className="section-heading"><div><p className="eyebrow">CONSTRUCCIÓN</p><h2>Sala y paredes</h2></div></div>
+            <div className="canvas-size-fields">
+              <label>Bloques X<input type="number" min="1" max="30" value={canvasSize.x} disabled={mode === "view"} onChange={(event) => rebuildCanvas({ ...canvasSize, x: Math.max(1, Number(event.target.value) || 1) })} /></label>
+              <label>Bloques Z<input type="number" min="1" max="30" value={canvasSize.z} disabled={mode === "view"} onChange={(event) => rebuildCanvas({ ...canvasSize, z: Math.max(1, Number(event.target.value) || 1) })} /></label>
+            </div>
+            <small className="panel-help">Cada bloque mide 1 metro. Suelo con colisión.</small>
+            <div className="construction-actions">
+              <button className="button primary" disabled={mode === "view"} onClick={addWall}>＋ Crear pared</button>
+              <button className="button" disabled={!selectedObject?.userData.wall || mode === "view"} onClick={() => rotateSelected(90)}>Girar 90°</button>
+              <button className="button" disabled={!selectedObject?.userData.wall || mode === "view"} onClick={() => rotateSelected(180)}>Girar 180°</button>
+            </div>
+          </section>
+          <section className="panel-section">
             <div className="section-heading"><div><p className="eyebrow">RECURSOS</p><h2>Biblioteca 3D</h2></div><span className="count-badge">{resources.length}</span></div>
             <label className="upload-zone" htmlFor="model-input"><span className="upload-icon">＋</span><strong>Importar modelo</strong><small>GLB / glTF · arrastra o selecciona</small></label>
             <input id="model-input" type="file" accept=".glb,.gltf,.bin,model/gltf-binary,model/gltf+json" hidden onChange={(event) => loadModel(event.target.files[0])} />
@@ -351,6 +445,7 @@ export default function Editor({ session, onLogout, onOpenAdmin }) {
         <aside className="inspector">
           <div className="inspector-header"><p className="eyebrow">INSPECTOR</p><h2>{selectedObject?.userData.modelName || "Sin selección"}</h2><p>{selectedObject ? (mode === "view" ? "La escena está bloqueada en Modo visualizar." : "Usa los controles sobre el objeto para transformarlo.") : "Selecciona un objeto en Modo crear o Editar."}</p></div>
           <div className={`transform-fields ${!selectedObject || mode === "view" ? "is-disabled" : ""}`}>
+            {selectedObject?.userData.wall && <div className="field-group"><div className="field-heading"><span>Dimensiones de pared</span><span className="axis-label">METROS</span></div><div className="vector-fields"><label><i className="x">ANCHO</i><input disabled={mode === "view"} type="number" min="0.1" step="0.1" value={selectedObject.userData.width} onChange={(event) => updateWallDimensions("width", event.target.value)} /></label><label><i className="y">ALTO</i><input disabled={mode === "view"} type="number" min="0.1" step="0.1" value={selectedObject.userData.height} onChange={(event) => updateWallDimensions("height", event.target.value)} /></label></div><small className="panel-help">Colisión tipo caja activa.</small></div>}
             {transformFields.map((type) => <div className="field-group" key={type}><div className="field-heading"><span>{type === "position" ? "Posición" : type === "rotation" ? "Rotación" : "Escala"}</span><span className="axis-label">{type === "rotation" ? "GRADOS" : "XYZ"}</span></div><div className="vector-fields">{axes.map((axis) => <label key={axis}><i className={axis}>{axis.toUpperCase()}</i><input disabled={!selectedObject || mode === "view"} type="number" step={type === "rotation" ? "1" : "0.1"} value={transformValues ? Number(transformValues[type][axis]).toFixed(2) : ""} onChange={(event) => setTransformValue(type, axis, event.target.value)} /></label>)}</div></div>)}
           </div>
           <div className="inspector-footer"><div className="model-meta"><span>IDENTIFICADOR</span><code>{selectedObject?.userData.modelId || "—"}</code></div><button className="button danger full" disabled={!selectedObject || mode === "view"} onClick={removeSelected}>Eliminar objeto</button><button className="link-button scale-link" disabled={!selectedObject || mode === "view"} onClick={() => setUniformScale(!uniformScale)}>{uniformScale ? "Escala vinculada" : "Escala libre"}</button></div>
