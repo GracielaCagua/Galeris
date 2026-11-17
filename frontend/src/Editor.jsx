@@ -375,7 +375,9 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
     if (!object || object.userData.wall) return;
     object.updateMatrixWorld(true);
     const objectBounds = new THREE.Box3().setFromObject(object);
-    const walls = objectsRef.current.filter((entry) => entry.userData.wall && entry.userData.hasCollision);
+    const walls = objectsRef.current.filter((entry) =>
+      entry.userData.wall && entry.userData.hasCollision && !entry.userData.boundaryWall
+    );
     for (const wall of walls) {
       wall.updateMatrixWorld(true);
       const wallBounds = new THREE.Box3().setFromObject(wall);
