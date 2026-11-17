@@ -246,6 +246,7 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
     floor.receiveShadow = true;
     scene.add(floor);
     scene.userData.canvasFloor = floor;
+    scene.userData.canvasSize = { x: 3, z: 5 };
     sceneRef.current = scene;
     createBoundaryWalls({ x: 3, z: 5 });
     transformRef.current = transform;
@@ -313,6 +314,7 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
     });
     sceneRef.current.add(nextGrid);
     sceneRef.current.userData.canvasGrid = nextGrid;
+    sceneRef.current.userData.canvasSize = { ...nextSize };
     setCanvasSize(nextSize);
     createBoundaryWalls(nextSize);
   };
@@ -344,8 +346,9 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
   };
 
   const constrainBoundaryWall = (wall) => {
-    const halfX = canvasSize.x / 2;
-    const halfZ = canvasSize.z / 2;
+    const size = sceneRef.current?.userData.canvasSize || canvasSize;
+    const halfX = size.x / 2;
+    const halfZ = size.z / 2;
     const horizontal = Math.abs(Math.cos(wall.rotation.y)) > 0.5;
     wall.rotation.y = horizontal ? 0 : Math.PI / 2;
     wall.position.set(
@@ -361,8 +364,9 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
     if (!object || object.userData.boundaryWall) return;
     object.updateMatrixWorld(true);
     const bounds = new THREE.Box3().setFromObject(object);
-    const halfX = canvasSize.x / 2 - 0.1;
-    const halfZ = canvasSize.z / 2 - 0.1;
+    const size = sceneRef.current?.userData.canvasSize || canvasSize;
+    const halfX = size.x / 2 - 0.1;
+    const halfZ = size.z / 2 - 0.1;
     const correction = new THREE.Vector3();
     if (bounds.min.x < -halfX) correction.x = -halfX - bounds.min.x;
     if (bounds.max.x > halfX) correction.x = halfX - bounds.max.x;
@@ -375,15 +379,14 @@ export default function Editor({ session, onLogout, onOpenAdmin, initialProject 
     if (!object || object.userData.wall) return;
     object.updateMatrixWorld(true);
     const objectBounds = new THREE.Box3().setFromObject(object);
-    const walls = objectsRef.current.filter((entry) =>
-      entry.userData.wall && entry.userData.hasCollision && !entry.userData.boundaryWall
-    );
+    const walls = objectsRef.current.filter((entry) => entry.userData.wall && entry.userData.hasCollision);
     for (const wall of walls) {
       wall.updateMatrixWorld(true);
       const wallBounds = new THREE.Box3().setFromObject(wall);
       if (!objectBounds.intersectsBox(wallBounds) || objectBounds.max.y < wallBounds.min.y || objectBounds.min.y > wallBounds.max.y) continue;
       const pushX = Math.min(objectBounds.max.x - wallBounds.min.x, wallBounds.max.x - objectBounds.min.x);
       const pushZ = Math.min(objectBounds.max.z - wallBounds.min.z, wallBounds.max.z - objectBounds.min.z);
+      if (Math.min(pushX, pushZ) <= 0.001) continue;
       if (pushX < pushZ) {
         object.position.x += objectBounds.getCenter(new THREE.Vector3()).x < wallBounds.getCenter(new THREE.Vector3()).x ? -pushX : pushX;
       } else {
