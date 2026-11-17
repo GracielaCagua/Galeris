@@ -29,6 +29,8 @@ function createPrimitive(type) {
   return group;
 }
 
+const snapToBlock = (value) => Math.round(value);
+
 function createWall(width = 4, height = 3) {
   const group = new THREE.Group();
   const material = new THREE.MeshStandardMaterial({ color: 0xe7e9ed, roughness: 0.8 });
@@ -131,14 +133,19 @@ export default function Editor({ session, onLogout, onOpenAdmin }) {
     transform.setSpace("world");
     transform.setSize(1.3);
     transform.addEventListener("dragging-changed", (event) => { orbit.enabled = !event.value; });
-    transform.addEventListener("objectChange", sync);
+    transform.addEventListener("objectChange", () => {
+      snapWall(selectedRef.current);
+      sync();
+    });
     scene.add(transform.getHelper());
     scene.add(new THREE.HemisphereLight(0xd9e5ff, 0x1b2332, 2.4));
     const light = new THREE.DirectionalLight(0xffffff, 3.5);
     light.position.set(4, 9, 5);
     light.castShadow = true;
     scene.add(light);
-    scene.add(new THREE.GridHelper(20, 20, 0x35404f, 0x202833));
+    const grid = new THREE.GridHelper(20, 20, 0x35404f, 0x202833);
+    scene.add(grid);
+    scene.userData.canvasGrid = grid;
     const floor = new THREE.Mesh(
       new THREE.BoxGeometry(3, 0.1, 5),
       new THREE.MeshStandardMaterial({ color: 0x68717d, roughness: 0.9 })
@@ -193,10 +200,30 @@ export default function Editor({ session, onLogout, onOpenAdmin }) {
 
   const rebuildCanvas = (nextSize) => {
     const floor = sceneRef.current?.userData.canvasFloor;
-    if (!floor) return;
+    const grid = sceneRef.current?.userData.canvasGrid;
+    if (!floor || !grid) return;
     floor.geometry.dispose();
     floor.geometry = new THREE.BoxGeometry(nextSize.x, 0.1, nextSize.z);
+    grid.geometry.dispose();
+    grid.geometry = new THREE.GridHelper(
+      Math.max(nextSize.x, nextSize.z),
+      Math.max(nextSize.x, nextSize.z),
+      0x35404f,
+      0x202833
+    ).geometry;
     setCanvasSize(nextSize);
+  };
+
+  const snapWall = (wall) => {
+    if (!wall?.userData.wall) return;
+    wall.scale.set(1, 1, 1);
+    wall.position.x = snapToBlock(wall.position.x);
+    wall.position.z = snapToBlock(wall.position.z);
+    wall.rotation.y = THREE.MathUtils.degToRad(
+      Math.round(THREE.MathUtils.radToDeg(wall.rotation.y) / 90) * 90
+    );
+    wall.userData.width = Math.max(1, snapToBlock(wall.userData.width));
+    wall.userData.height = Math.max(1, snapToBlock(wall.userData.height));
   };
 
   const addWall = () => {
@@ -222,13 +249,14 @@ export default function Editor({ session, onLogout, onOpenAdmin }) {
     selectedRef.current.rotation.y = THREE.MathUtils.degToRad(
       Math.round(THREE.MathUtils.radToDeg(selectedRef.current.rotation.y) / 90) * 90
     );
+    snapWall(selectedRef.current);
     sync();
   };
 
   const updateWallDimensions = (field, value) => {
     const wall = selectedRef.current;
     if (!wall?.userData.wall || mode === "view") return;
-    const next = Math.max(0.1, Number(value) || 0.1);
+    const next = Math.max(1, snapToBlock(Number(value) || 1));
     wall.userData[field] = next;
     wall.userData.collision[field] = next;
     const mesh = wall.children[0];
@@ -414,8 +442,8 @@ export default function Editor({ session, onLogout, onOpenAdmin }) {
           <section className="panel-section">
             <div className="section-heading"><div><p className="eyebrow">CONSTRUCCIÓN</p><h2>Sala y paredes</h2></div></div>
             <div className="canvas-size-fields">
-              <label>Bloques X<input type="number" min="1" max="30" value={canvasSize.x} disabled={mode === "view"} onChange={(event) => rebuildCanvas({ ...canvasSize, x: Math.max(1, Number(event.target.value) || 1) })} /></label>
-              <label>Bloques Z<input type="number" min="1" max="30" value={canvasSize.z} disabled={mode === "view"} onChange={(event) => rebuildCanvas({ ...canvasSize, z: Math.max(1, Number(event.target.value) || 1) })} /></label>
+              <label>Bloques X<input type="number" min="1" max="30" step="1" value={canvasSize.x} disabled={mode === "view"} onChange={(event) => rebuildCanvas({ ...canvasSize, x: Math.max(1, Math.round(Number(event.target.value) || 1)) })} /></label>
+              <label>Bloques Z<input type="number" min="1" max="30" step="1" value={canvasSize.z} disabled={mode === "view"} onChange={(event) => rebuildCanvas({ ...canvasSize, z: Math.max(1, Math.round(Number(event.target.value) || 1)) })} /></label>
             </div>
             <small className="panel-help">Cada bloque mide 1 metro. Suelo con colisión.</small>
             <div className="construction-actions">
