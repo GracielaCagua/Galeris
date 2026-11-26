@@ -1,86 +1,119 @@
 # Galeris
 
-Backend local para la galería de recursos de Galeris. La API está hecha con FastAPI; SQLite guarda metadatos y proyectos, mientras que los archivos se guardan en disco.
+Galeris integra una interfaz web para gestionar modelos 3D, una API local para
+recursos y proyectos, y un editor 3D desarrollado con Godot.
 
-## 1. Preparar el entorno
+## Estructura
 
-Requiere Python 3.10 o posterior. Desde la raíz del repositorio:
+```text
+Galeris/
+├── frontend/   # React + Vite + Three.js
+├── backend/    # FastAPI + SQLAlchemy + PostgreSQL
+├── godot/      # Editor y visualización 3D
+└── docs/       # Documentación del proyecto
+```
+
+### Frontend
+
+La aplicación React está en `frontend/`. Incluye inicio de sesión, editor de
+modelos GLB/glTF, biblioteca de recursos, modos crear/editar/visualizar,
+selección, transformaciones, exportación de escenas JSON y el panel de
+administración de usuarios. `frontend/legacy/app.js` conserva la implementación
+anterior basada en JavaScript plano.
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+La aplicación estará disponible normalmente en `http://localhost:5173`.
+
+### Backend
+
+La API FastAPI está en `backend/` y persiste metadatos, usuarios y proyectos con
+SQLite. Los archivos se almacenan en disco.
+
+> **PostgreSQL es la base de datos predeterminada.** Antes de iniciar la API hay
+> que prepararla. Los pasos, los endpoints y la configuración están en
+> [`docs/backend.md`](docs/backend.md).
 
 ```powershell
 cd backend
 py -m venv .venv
 .venv\Scripts\Activate.ps1
 py -m pip install -r requirements.txt
-```
-
-## 2. Iniciar la API
-
-```powershell
 py -m uvicorn app.main:app --reload
 ```
 
-La API queda en `http://127.0.0.1:8000`; la documentación interactiva está en `http://127.0.0.1:8000/docs`. La primera ejecución crea `backend/data/gallery.db` y las carpetas `backend/storage/resources` y `backend/storage/thumbnails`.
+La API queda disponible en `http://127.0.0.1:8000` y su documentación en
+`http://127.0.0.1:8000/docs`.
 
-Se pueden cambiar las ubicaciones mediante `DATABASE_URL` y `GALLERY_STORAGE_DIR`. La URL predeterminada de base de datos es `sqlite:///./data/gallery.db` (relativa a `backend`).
+Al arrancar por primera vez se crea la cuenta administradora `admin` /
+`admin123`. Se puede cambiar con las variables `GALLERIS_ADMIN_USERNAME`,
+`GALLERIS_ADMIN_PASSWORD` y `GALLERIS_ADMIN_EMAIL` antes del primer arranque.
 
-## 3. Endpoints
+Endpoints principales:
 
 | Método | Ruta | Uso |
 | --- | --- | --- |
-| `POST` | `/api/resources` | Subir un archivo y, opcionalmente, su miniatura (`multipart/form-data`: `file`, `name`, `type`, `category`, `thumbnail`). |
-| `GET` | `/api/resources` | Listar recursos; admite filtros `type` y `category`. |
-| `GET` | `/api/resources/{id}` | Consultar los metadatos de un recurso. |
-| `GET` | `/api/resources/{id}/file` | Descargar el archivo original. |
-| `GET` | `/api/resources/{id}/thumbnail` | Obtener su miniatura, si existe. |
-| `DELETE` | `/api/resources/{id}` | Eliminar metadatos y archivos del almacenamiento local. |
-| `POST` | `/api/projects` | Guardar un proyecto JSON. |
-| `GET` | `/api/projects` | Listar proyectos. |
-| `GET` | `/api/projects/{id}` | Recuperar un proyecto. |
-| `PUT` | `/api/projects/{id}` | Actualizar un proyecto. |
-| `DELETE` | `/api/projects/{id}` | Eliminar un proyecto. |
+| `GET` | `/api/health` | Estado de la API |
+| `POST` | `/api/auth/login` | Iniciar sesión y obtener el token |
+| `POST` | `/api/auth/register` | Crear una cuenta nueva con rol de usuario |
+| `GET` | `/api/auth/me` | Usuario de la sesión actual |
+| `POST` | `/api/auth/logout` | Cerrar sesión |
+| `GET` | `/api/admin/stats` | Resumen de usuarios, proyectos y recursos (admin) |
+| `GET` | `/api/admin/users` | Listar y filtrar todos los usuarios (admin) |
+| `POST` | `/api/admin/users` | Crear un usuario (admin) |
+| `GET` | `/api/admin/users/{id}` | Ficha completa de un usuario (admin) |
+| `PATCH` | `/api/admin/users/{id}` | Editar rol, estado, datos o contraseña (admin) |
+| `DELETE` | `/api/admin/users/{id}` | Eliminar un usuario (admin) |
+| `POST` / `GET` | `/api/resources` | Crear y listar recursos |
+| `GET` | `/api/resources/{id}/file` | Descargar un recurso |
+| `POST` / `GET` | `/api/projects` | Crear y listar proyectos |
+| `PUT` / `DELETE` | `/api/projects/{id}` | Actualizar y eliminar proyectos |
 
-Los metadatos incluyen nombre, tipo, categoría, ruta de almacenamiento, ruta de miniatura y fecha de creación. SQLite no contiene los bytes de los archivos. Las respuestas también incluyen URLs HTTP para que Godot pueda descargar los recursos.
+Los endpoints de administración requieren la cabecera
+`Authorization: Bearer <token>` de una cuenta con rol `admin`.
 
-## 4. Conectar Godot
-
-Añade un nodo `HTTPRequest` a la escena y asígnalo a `$HTTPRequest`. Este ejemplo lista recursos y muestra sus nombres:
-
-```gdscript
-extends Node
-
-const API_URL := "http://127.0.0.1:8000/api/resources"
-
-func _ready() -> void:
-	$HTTPRequest.request_completed.connect(_on_resources_loaded)
-	var error := $HTTPRequest.request(API_URL)
-	if error != OK:
-		push_error("No se pudo iniciar la petición a Galeris: %s" % error)
-
-func _on_resources_loaded(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
-	if result != HTTPRequest.RESULT_SUCCESS or code != 200:
-		push_error("Error al consultar recursos. HTTP %s" % code)
-		return
-	var resources: Array = JSON.parse_string(body.get_string_from_utf8())
-	for resource in resources:
-		print(resource["name"], " -> ", resource["file_url"])
-```
-
-Para descargar el archivo, usa otra petición `HTTPRequest` con el `file_url` devuelto por la API. Dentro del juego conviene guardar la URL base en un único autoload/configuración para poder cambiarla sin tocar las escenas.
-
-## 5. Ejecutar las pruebas
-
-Desde `backend`:
+Para cargar usuarios y proyectos de demostración (contraseña `galeris123`):
 
 ```powershell
+cd backend
+.venv\Scripts\python.exe seed_demo.py
+```
+
+Para ejecutar las pruebas:
+
+```powershell
+cd backend
 py -m pip install -r requirements-dev.txt
 py -m pytest
 ```
 
-## Estructura y migración
+### Godot
 
-- `app/models.py` define los metadatos persistidos.
-- `app/database.py` centraliza el motor y las sesiones SQLAlchemy; `DATABASE_URL` permite cambiar el motor compatible sin alterar los endpoints.
-- `app/storage.py` contiene el adaptador de archivos local; la API depende de esa interfaz y no de rutas de disco directas.
-- `app/routers/` contiene los endpoints de recursos y proyectos.
+El proyecto Godot está en `godot/`. Se conservaron las escenas y scripts del
+sistema de construcción (paredes, suelos, cámara, cuadrícula y UI), junto con
+los módulos de modos, control de edición y guardado de proyectos incorporados
+desde `feature/godot`.
 
-En una migración futura se sustituye el adaptador de almacenamiento por uno de objetos en la nube y se cambia la URL del motor/base de datos, manteniendo el contrato HTTP de Godot. Para entornos multiusuario habrá que añadir autenticación, límites de subida y una migración de esquema gestionada antes de exponer el servicio fuera del equipo local.
+Abrir `godot/project.godot` desde el editor Godot 4.7 o posterior. En Modo
+Crear se pueden añadir paredes con colisión, moverlas, girarlas en pasos de
+90°/180° y editar su ancho y alto. El lienzo se configura en bloques de un
+metro (por ejemplo, 3 x 5), y el piso, el cubo de prueba y las paredes tienen
+colisión física.
+
+El botón `Subir cuadro / imagen` permite importar cuadros en JPG, JPEG, PNG,
+WEBP, BMP o TGA y colocarlos sobre las paredes mediante el selector de archivos.
+
+## Integración de datos
+
+El formato de proyecto compartido se documenta en
+`godot/data/formato_proyecto.json`. Godot guarda proyectos localmente mediante
+`ProjectManager`; la API ofrece el almacenamiento remoto/local de recursos y
+proyectos mediante HTTP.
+
+El cliente Godot usa `http://127.0.0.1:8000` como URL base en
+`godot/scripts/core/api.gd`. Inicia el backend antes de probar las funciones
+que consultan recursos.
